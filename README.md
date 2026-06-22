@@ -45,6 +45,10 @@ Each library has its own README (linked below — the repo landing page renders 
 - [swPlugin](https://github.com/kzangeli/swPlugin) — generic plugin loader (`dlopen` wrapper)
 - [swNgsild](https://github.com/kzangeli/swNgsild) — NGSI-LD validation + format conversion
 
+**Tooling** (github.com/kzangeli):
+
+- [swTest](https://github.com/kzangeli/swTest) — generic functional-test harness (input → stdout, with `REGEX()` / `#SORT` smart diff); `install` collects its runner into `bin/`
+
 ## Prerequisites
 
 - The sibling repos listed above, cloned under the same parent dir (`~/git`).
