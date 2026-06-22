@@ -23,6 +23,28 @@ them; it does not vendor them.
 Build order respects dependencies: k-libs first (foundation, no sw-lib deps),
 then sw-libs (`swRest swJsonld swPlugin swNgsild`).
 
+## Libraries
+
+Each library has its own README (linked below — the repo landing page renders it).
+
+**k-libs** (gitlab.com/kzangeli) — foundation, no sw-lib dependencies:
+
+- [kbase](https://gitlab.com/kzangeli/kbase) — core utilities and base types
+- [kalloc](https://gitlab.com/kzangeli/kalloc) — arena allocator (`KAlloc`)
+- [klog](https://gitlab.com/kzangeli/klog) — logging
+- [khash](https://gitlab.com/kzangeli/khash) — hash tables
+- [kjson](https://gitlab.com/kzangeli/kjson) — JSON parser + tree (`KjNode`)
+- [kargs](https://gitlab.com/kzangeli/kargs) — CLI argument parsing
+- [ktrace](https://gitlab.com/kzangeli/ktrace) — trace-level logging
+- [kprom](https://gitlab.com/kzangeli/kprom) — Prometheus metrics
+
+**sw-libs** (github.com/kzangeli) — depend on the k-libs and each other:
+
+- [swRest](https://github.com/kzangeli/swRest) — REST server (libmicrohttpd) + HTTP client
+- [swJsonld](https://github.com/kzangeli/swJsonld) — JSON-LD context expansion / compaction
+- [swPlugin](https://github.com/kzangeli/swPlugin) — generic plugin loader (`dlopen` wrapper)
+- [swNgsild](https://github.com/kzangeli/swNgsild) — NGSI-LD validation + format conversion
+
 ## Prerequisites
 
 - The sibling repos listed above, cloned under the same parent dir (`~/git`).
