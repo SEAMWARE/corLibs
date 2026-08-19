@@ -1,0 +1,20 @@
+# klib-pins - the pinned k-lib versions, in ONE place.
+#
+# The k-libs are the foundation layer (gitlab.com/kzangeli, public, Apache 2.0).
+# They are pinned to release branches: the combination below is the one the
+# whole stack is known to build and pass its suite with.
+#
+# Everything that assembles the stack reads THIS file - bootstrap.sh and the
+# broker's docker/Dockerfile both did so by restating the list, which is how
+# two copies of a version pin end up disagreeing at the worst moment.
+#
+# Format: <repo> <ref>, one per line. Blank lines and #-comments ignored.
+#
+kbase   release/0.10
+kalloc  release/0.10.1
+klog    release/0.10
+khash   release/0.10
+kjson   release/0.12.0
+kargs   release/0.10
+ktrace  release/0.10
+kprom   release/0.1.0

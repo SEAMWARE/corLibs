@@ -42,24 +42,26 @@ CI_ORG="SEAMWARE"        # the cor* repos
 KLIB_OWNER="kzangeli"    # the k-libs, on gitlab
 
 #
+# The k-lib pins come from ./klib-pins, which is the single source of truth -
+# the broker's Dockerfile reads the same file. Do not restate them here.
+#
+PINS="$HERE/klib-pins"
+[ -r "$PINS" ] || { echo "bootstrap.sh: cannot read $PINS"; exit 1; }
+
+#
 # repo : host : ref
 #
-# The k-libs are PINNED to release branches - the combination below is the one
-# the stack is known to build and pass its suite with. The cor* repos track
-# master: they move together, and a pin between them would only ever be stale.
+# The cor* repos track master: they move together, and a pin between them would
+# only ever be stale. corLibs itself is deliberately absent - you are standing
+# in it.
 #
-# corLibs itself is deliberately absent: you are standing in it.
-#
-REPOS=(
-  "kbase:gitlab:release/0.10"
-  "kalloc:gitlab:release/0.10.1"
-  "klog:gitlab:release/0.10"
-  "khash:gitlab:release/0.10"
-  "kjson:gitlab:release/0.12.0"
-  "kargs:gitlab:release/0.10"
-  "ktrace:gitlab:release/0.10"
-  "kprom:gitlab:release/0.1.0"
+REPOS=()
+while read -r repo ref; do
+  case "$repo" in ''|\#*) continue ;; esac
+  REPOS+=("$repo:gitlab:$ref")
+done < <(sed 's/#.*//' "$PINS")
 
+REPOS+=(
   "corPlugin:github:master"
   "corRest:github:master"
   "corJsonld:github:master"
