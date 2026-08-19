@@ -5,23 +5,23 @@
 #
 # Copyright 2026 Seamware
 #
-# Umbrella makefile for all k-libs and sw-libs.
+# Umbrella makefile for all k-libs and Cor-Libs.
 # Libraries live under ~/git as separate repos.
 # Build order respects dependencies.
 #
 ROOT = $(HOME)/git
 
-# k-libs (foundation, no sw-lib dependencies)
+# k-libs (foundation, no Cor-Lib dependencies)
 K_DIRS = kbase klog ktrace kalloc kjson khash kprom kargs
 
-# sw-libs (depend on k-libs and each other)
-SW_DIRS = swRest swJsonld swPlugin swNgsild
+# Cor-Libs (depend on k-libs and each other)
+COR_DIRS = corRest corJsonld corPlugin corNgsild
 
-DIRS = $(K_DIRS) $(SW_DIRS)
+DIRS = $(K_DIRS) $(COR_DIRS)
 
-SWLIBS_HOME = $(ROOT)/swLibs
-BIN_DIR     = $(SWLIBS_HOME)/bin
-LIB_DIR     = $(SWLIBS_HOME)/lib
+CORLIBS_HOME = $(ROOT)/corLibs
+BIN_DIR     = $(CORLIBS_HOME)/bin
+LIB_DIR     = $(CORLIBS_HOME)/lib
 
 all install clean ci cdi di i debug:
 	@for dir in $(DIRS); do echo "=== $$dir: $@ ===" && $(MAKE) -C $(ROOT)/$$dir $@ || exit 1; done
@@ -29,10 +29,10 @@ all install clean ci cdi di i debug:
 
 install-local:
 	@mkdir -p $(BIN_DIR) $(LIB_DIR)
-	@cat $(ROOT)/swTest/swTest > $(BIN_DIR)/swTest && chmod +x $(BIN_DIR)/swTest
-	@cat $(ROOT)/swTest/swTestFunctions.sh > $(BIN_DIR)/swTestFunctions.sh
-	@cat $(ROOT)/swTest/swDiff > $(BIN_DIR)/swDiff && chmod +x $(BIN_DIR)/swDiff
-	@cat $(ROOT)/swTest/swDiffGui > $(BIN_DIR)/swDiffGui && chmod +x $(BIN_DIR)/swDiffGui
+	@cat $(ROOT)/corTest/corTest > $(BIN_DIR)/corTest && chmod +x $(BIN_DIR)/corTest
+	@cat $(ROOT)/corTest/corTestFunctions.sh > $(BIN_DIR)/corTestFunctions.sh
+	@cat $(ROOT)/corTest/corDiff > $(BIN_DIR)/corDiff && chmod +x $(BIN_DIR)/corDiff
+	@cat $(ROOT)/corTest/corDiffGui > $(BIN_DIR)/corDiffGui && chmod +x $(BIN_DIR)/corDiffGui
 	@for dir in $(DIRS); do \
 	  for f in $(ROOT)/$$dir/lib*.so $(ROOT)/$$dir/lib*.a; do \
 	    [ -f "$$f" ] && cat "$$f" > $(LIB_DIR)/$$(basename "$$f"); \
@@ -119,4 +119,4 @@ help:
 	@echo ""
 	@echo "Libraries under $(ROOT):"
 	@echo "  k-libs: $(K_DIRS)"
-	@echo "  sw-libs: $(SW_DIRS)"
+	@echo "  Cor-Libs: $(COR_DIRS)"

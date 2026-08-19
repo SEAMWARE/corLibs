@@ -1,33 +1,33 @@
-# swLibs
+# corLibs
 
-Umbrella build for the **k-libs** and **sw-libs** that the swBroker (NGSI-LD
+Umbrella build for the **k-libs** and **Cor-Libs** that the coraine (NGSI-LD
 context broker) links against. This repo is not a library itself — it is a
 thin orchestration layer: a makefile that builds each sibling library in
 dependency order and collects the resulting archives, shared objects and test
 tooling into `lib/` and `bin/`.
 
-All libraries live as **separate sibling repos under `~/git`**. swLibs drives
+All libraries live as **separate sibling repos under `~/git`**. corLibs drives
 them; it does not vendor them.
 
 ## Layout
 
 ```
 ~/git/
-├── swLibs/        ← this repo (umbrella: makefile + iter.sh, collects into bin/ lib/)
+├── corLibs/        ← this repo (umbrella: makefile + iter.sh, collects into bin/ lib/)
 ├── kbase  kalloc  klog  khash  kjson  kargs  ktrace  kprom   ← k-libs   (gitlab.com/kzangeli)
-├── swRest  swJsonld  swPlugin  swNgsild                      ← sw-libs  (github.com/kzangeli)
-├── swTest                                                    ← test runner (github.com/kzangeli)
-└── swBroker                                                  ← the broker (links the above)
+├── corRest  corJsonld  corPlugin  corNgsild                      ← Cor-Libs  (github.com/kzangeli)
+├── corTest                                                    ← test runner (github.com/kzangeli)
+└── coraine                                                  ← the broker (links the above)
 ```
 
-Build order respects dependencies: k-libs first (foundation, no sw-lib deps),
-then sw-libs (`swRest swJsonld swPlugin swNgsild`).
+Build order respects dependencies: k-libs first (foundation, no Cor-Lib deps),
+then Cor-Libs (`corRest corJsonld corPlugin corNgsild`).
 
 ## Libraries
 
 Each library has its own README (linked below — the repo landing page renders it).
 
-**k-libs** (gitlab.com/kzangeli) — foundation, no sw-lib dependencies:
+**k-libs** (gitlab.com/kzangeli) — foundation, no Cor-Lib dependencies:
 
 - [kbase](https://gitlab.com/kzangeli/kbase) — core utilities and base types
 - [kalloc](https://gitlab.com/kzangeli/kalloc) — arena allocator (`KAlloc`)
@@ -38,22 +38,22 @@ Each library has its own README (linked below — the repo landing page renders 
 - [ktrace](https://gitlab.com/kzangeli/ktrace) — trace-level logging
 - [kprom](https://gitlab.com/kzangeli/kprom) — Prometheus metrics
 
-**sw-libs** (github.com/kzangeli) — depend on the k-libs and each other:
+**Cor-Libs** (github.com/kzangeli) — depend on the k-libs and each other:
 
-- [swRest](https://github.com/kzangeli/swRest) — REST server (libmicrohttpd) + HTTP client
-- [swJsonld](https://github.com/kzangeli/swJsonld) — JSON-LD context expansion / compaction
-- [swPlugin](https://github.com/kzangeli/swPlugin) — generic plugin loader (`dlopen` wrapper)
-- [swNgsild](https://github.com/kzangeli/swNgsild) — NGSI-LD validation + format conversion
+- [corRest](https://github.com/kzangeli/corRest) — REST server (libmicrohttpd) + HTTP client
+- [corJsonld](https://github.com/kzangeli/corJsonld) — JSON-LD context expansion / compaction
+- [corPlugin](https://github.com/kzangeli/corPlugin) — generic plugin loader (`dlopen` wrapper)
+- [corNgsild](https://github.com/kzangeli/corNgsild) — NGSI-LD validation + format conversion
 
 **Tooling** (github.com/kzangeli):
 
-- [swTest](https://github.com/kzangeli/swTest) — generic functional-test harness (input → stdout, with `REGEX()` / `#SORT` smart diff); `install` collects its runner into `bin/`
+- [corTest](https://github.com/kzangeli/corTest) — generic functional-test harness (input → stdout, with `REGEX()` / `#SORT` smart diff); `install` collects its runner into `bin/`
 
 ## Prerequisites
 
 - The sibling repos listed above, cloned under the same parent dir (`~/git`).
 - A C toolchain + `make`. Individual libs may pull system packages (OpenSSL,
-  libmicrohttpd, mosquitto, GEOS, the mongo-c v2 driver, …) — see swBroker.
+  libmicrohttpd, mosquitto, GEOS, the mongo-c v2 driver, …) — see coraine.
 
 The pinned versions known to build together:
 
@@ -63,25 +63,25 @@ The pinned versions known to build together:
 | kalloc | `release/0.10.1`| | kargs    | `release/0.10`   |
 | klog   | `release/0.10`  | | ktrace   | `release/0.10`   |
 | khash  | `release/0.10`  | | kprom    | `release/0.1.0`  |
-| swRest / swJsonld / swPlugin / swNgsild / swTest | `master` | | | |
+| corRest / corJsonld / corPlugin / corNgsild / corTest | `master` | | | |
 
 ## Quick start
 
 If you don't have the sibling repos yet, the easiest path is the bootstrap
-script (`bootstrap-swlibs.sh`, kept next to the repos under `~/git`): it clones
+script (`bootstrap-corlibs.sh`, kept next to the repos under `~/git`): it clones
 every dependency at the pinned versions and runs the umbrella build for you.
 
 Otherwise, with the siblings already cloned:
 
 ```sh
-cd ~/git/swLibs
+cd ~/git/corLibs
 make di          # debug build + install of every lib, collected into lib/ bin/
 ```
 
 Then build the broker:
 
 ```sh
-cd ~/git/swBroker && make di
+cd ~/git/coraine && make di
 ```
 
 ## Targets
@@ -90,7 +90,7 @@ cd ~/git/swBroker && make di
 |---------------|---------------------------------------------------------|
 | `make` / `all`| release build of every library                          |
 | `make debug`  | debug build of every library                            |
-| `make install`| build + collect `lib*.{a,so}` and swTest tooling into `lib/`, `bin/` |
+| `make install`| build + collect `lib*.{a,so}` and corTest tooling into `lib/`, `bin/` |
 | `make di`     | debug + install (the usual dev cycle)                   |
 | `make i`      | release + install                                       |
 | `make ci`     | clean + install                                         |
@@ -107,8 +107,8 @@ cd ~/git/swBroker && make di
 ## Notes
 
 - `install` collects into this repo's `bin/` and `lib/` (both git-ignored). It
-  also copies `swTest`, `swDiff`, `swDiffGui` and `swTestFunctions.sh` from
-  `../swTest`, which swBroker's test target (`~/git/swLibs/bin/swTest`) relies
+  also copies `corTest`, `corDiff`, `corDiffGui` and `corTestFunctions.sh` from
+  `../corTest`, which coraine's test target (`~/git/corLibs/bin/corTest`) relies
   on.
 - The umbrella does not pin versions itself — it builds whatever each sibling
   repo is currently checked out at. Use `make branch` to confirm, or the

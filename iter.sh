@@ -13,9 +13,9 @@
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 
 K_DIRS="kbase klog ktrace kalloc kjson khash kprom kargs"
-SW_DIRS="swRest swJsonld swPlugin swNgsild"
+COR_DIRS="corRest corJsonld corPlugin corNgsild"
 
-for dir in $K_DIRS $SW_DIRS; do
+for dir in $K_DIRS $COR_DIRS; do
   if [ -d "$ROOT/$dir" ]; then
     cd "$ROOT/$dir"
     echo '---------- '$dir' ---------------'
