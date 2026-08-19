@@ -9,6 +9,8 @@ tooling into `lib/` and `bin/`.
 All libraries live as **separate sibling repos under `~/git`**. corLibs drives
 them; it does not vendor them.
 
+- **License:** [Apache License 2.0](LICENSE) — Copyright 2026 Seamware
+
 ## Layout
 
 ```

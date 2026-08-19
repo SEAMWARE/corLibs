@@ -4,6 +4,7 @@
 # AUTHOR          Ken Zangelin
 #
 # Copyright 2026 Seamware
+# SPDX-License-Identifier: Apache-2.0
 #
 # Umbrella makefile for all k-libs and Cor-Libs.
 # Every library is a separate repo, and they are SIBLINGS of this one - the
