@@ -63,10 +63,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #   postgresql-client  - psql, for the TRoE suites
 #   jq                 - timestamp extraction in expects
 #   procps / psmisc    - pkill, pgrep / killall
-#   openssl, curl      - TLS notification tests, every request
+#   openssl, curl      - the mqtts certs, and every request
+#   mosquitto          - the DAEMON, not just the client library. The MQTT
+#                        tests write a config and run `mosquitto -d -c ...`
+#                        themselves on private ports (11883/4/5, mqtts 11887),
+#                        so the rig is self-contained - but the binary has to
+#                        exist. libmosquitto-dev above is the link-time library
+#                        and does NOT bring it.
 #
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      python3 coreutils postgresql-client jq procps psmisc openssl \
+      python3 coreutils postgresql-client jq procps psmisc openssl mosquitto \
     && rm -rf /var/lib/apt/lists/*
 
 # mongosh - the harness drops databases and DETECTS whether the mongo it is
@@ -113,7 +119,7 @@ RUN git clone --depth 1 --branch "${MONGOC_VERSION}" \
 RUN set -eux; \
     pkg-config --exists mongoc2       || { echo "FATAL: mongoc2 not visible to pkg-config"; exit 1; }; \
     pkg-config --exists libmicrohttpd || { echo "FATAL: libmicrohttpd not visible to pkg-config"; exit 1; }; \
-    for cmd in cmake gcc git curl jq python3 psql mongosh pkill pgrep killall timeout openssl; do \
+    for cmd in cmake gcc git curl jq python3 psql mongosh pkill pgrep killall timeout openssl mosquitto; do \
       command -v "$cmd" >/dev/null || { echo "FATAL: $cmd missing"; exit 1; }; \
     done; \
     echo "environment complete"
