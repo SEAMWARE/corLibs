@@ -15,8 +15,8 @@ them; it does not vendor them.
 ~/git/
 ├── corLibs/        ← this repo (umbrella: makefile + iter.sh, collects into bin/ lib/)
 ├── kbase  kalloc  klog  khash  kjson  kargs  ktrace  kprom   ← k-libs   (gitlab.com/kzangeli)
-├── corRest  corJsonld  corPlugin  corNgsild                      ← Cor-Libs  (github.com/kzangeli)
-├── corTest                                                    ← test runner (github.com/kzangeli)
+├── corRest  corJsonld  corPlugin  corNgsild                      ← Cor-Libs  (github.com/SEAMWARE)
+├── corTest                                                    ← test runner (github.com/SEAMWARE)
 └── coraine                                                  ← the broker (links the above)
 ```
 
@@ -38,16 +38,16 @@ Each library has its own README (linked below — the repo landing page renders 
 - [ktrace](https://gitlab.com/kzangeli/ktrace) — trace-level logging
 - [kprom](https://gitlab.com/kzangeli/kprom) — Prometheus metrics
 
-**Cor-Libs** (github.com/kzangeli) — depend on the k-libs and each other:
+**Cor-Libs** (github.com/SEAMWARE) — depend on the k-libs and each other:
 
-- [corRest](https://github.com/kzangeli/corRest) — REST server (libmicrohttpd) + HTTP client
-- [corJsonld](https://github.com/kzangeli/corJsonld) — JSON-LD context expansion / compaction
-- [corPlugin](https://github.com/kzangeli/corPlugin) — generic plugin loader (`dlopen` wrapper)
-- [corNgsild](https://github.com/kzangeli/corNgsild) — NGSI-LD validation + format conversion
+- [corRest](https://github.com/SEAMWARE/corRest) — REST server (libmicrohttpd) + HTTP client
+- [corJsonld](https://github.com/SEAMWARE/corJsonld) — JSON-LD context expansion / compaction
+- [corPlugin](https://github.com/SEAMWARE/corPlugin) — generic plugin loader (`dlopen` wrapper)
+- [corNgsild](https://github.com/SEAMWARE/corNgsild) — NGSI-LD validation + format conversion
 
-**Tooling** (github.com/kzangeli):
+**Tooling** (github.com/SEAMWARE):
 
-- [corTest](https://github.com/kzangeli/corTest) — generic functional-test harness (input → stdout, with `REGEX()` / `#SORT` smart diff); `install` collects its runner into `bin/`
+- [corTest](https://github.com/SEAMWARE/corTest) — generic functional-test harness (input → stdout, with `REGEX()` / `#SORT` smart diff); `install` collects its runner into `bin/`
 
 ## Prerequisites
 
