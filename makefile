@@ -6,10 +6,16 @@
 # Copyright 2026 Seamware
 #
 # Umbrella makefile for all k-libs and Cor-Libs.
-# Libraries live under ~/git as separate repos.
-# Build order respects dependencies.
+# Every library is a separate repo, and they are SIBLINGS of this one - the
+# include paths and CMake references all resolve as ../<name>, so the layout is
+# part of the build contract.
 #
-ROOT = $(HOME)/git
+# ROOT is therefore derived from where this makefile actually sits, not from a
+# fixed path: a checkout under any directory builds itself, which is what lets
+# CI (where there is no ~/git) use the same recipe as a workstation. Override
+# it explicitly if you ever need to point somewhere else.
+#
+ROOT ?= $(abspath $(dir $(lastword $(MAKEFILE_LIST)))..)
 
 # k-libs (foundation, no Cor-Lib dependencies)
 K_DIRS = kbase klog ktrace kalloc kjson khash kprom kargs
