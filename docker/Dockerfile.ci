@@ -1,0 +1,122 @@
+# Dockerfile.ci - the CI base image for the whole Cor stack.
+#
+# WHAT THIS IS: the build and test ENVIRONMENT, and nothing else. No source, no
+# libraries of ours, no broker. Every workflow in every cor* repo runs inside
+# it, so a green run means green against the same toolchain the shipped image
+# is built with.
+#
+# WHY IT EXISTS: two dependencies are packaged by no distribution and have to be
+# compiled - the mongo-c v2 driver and libmicrohttpd. That is minutes on every
+# job, every repo, forever. Baking them once turns each run's setup into a
+# pull. Nothing else in here is slow; those two are the whole argument.
+#
+# WHY UBUNTU: the broker's runtime image is ubuntu:26.04 and so is the
+# workstation this is developed on. A third environment in the middle is where
+# environment-sensitive bugs hide. The runtime package names are release-bound
+# anyway (libicu78, the t64 suffixes from the 64-bit time_t transition), so the
+# choice is already made - this just stops it being made twice.
+#
+# The digest, not just the tag: 26.04 moves as the release takes updates, and a
+# base that changes without a commit saying so is a CI result you cannot trust.
+# Refresh deliberately:
+#   docker pull ubuntu:26.04 && docker image inspect ubuntu:26.04 \
+#     --format '{{index .RepoDigests 0}}'
+#
+# Build and publish:
+#   docker build -f docker/Dockerfile.ci -t <registry>/coraine-ci:<yyyy-mm-dd> .
+#
+# Copyright 2026 Seamware
+#
+FROM ubuntu@sha256:3131b4cc82a783df6c9df078f86e01819a13594b865c2cad47bd1bca2b7063bb
+
+LABEL org.opencontainers.image.title="coraine-ci" \
+      org.opencontainers.image.description="Build + test environment for the Cor stack" \
+      org.opencontainers.image.vendor="Seamware"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Pinned the same way the broker image pins them, and for the same reason.
+ARG MONGOC_VERSION=2.2.2
+ARG MHD_VERSION=1.0.2
+
+# ---------------------------------------------------------------------------
+#
+# 1. Toolchain and the -dev packages the libs link against.
+#
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential cmake git pkg-config ca-certificates curl gnupg \
+      libssl-dev libgeos-dev libmosquitto-dev libpq-dev libicu-dev \
+      libsasl2-dev libzstd-dev zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+#
+# 2. What the FUNCTEST HARNESS shells out to.
+#
+# Not guesswork - this list is every external command the suite actually
+# invokes. The easy ones to forget are the process tools: the harness reaps
+# brokers with pkill/pgrep and mocks with killall, and without them teardown
+# fails in ways that look like flaky tests rather than a missing package.
+#
+#   python3            - the harness diff / regen tooling
+#   coreutils          - timeout, date, seq
+#   postgresql-client  - psql, for the TRoE suites
+#   jq                 - timestamp extraction in expects
+#   procps / psmisc    - pkill, pgrep / killall
+#   openssl, curl      - TLS notification tests, every request
+#
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3 coreutils postgresql-client jq procps psmisc openssl \
+    && rm -rf /var/lib/apt/lists/*
+
+# mongosh - the harness drops databases and DETECTS whether the mongo it is
+# pointed at is a replica set (the HA cache-sync tests need a change stream and
+# silently leave the run set on a standalone). It is not in the Ubuntu archive.
+RUN curl -fsSL https://pgp.mongodb.com/server-8.0.asc \
+      | gpg --dearmor -o /usr/share/keyrings/mongodb.gpg \
+ && echo "deb [signed-by=/usr/share/keyrings/mongodb.gpg] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse" \
+      > /etc/apt/sources.list.d/mongodb.list \
+ && apt-get update && apt-get install -y --no-install-recommends mongodb-mongosh \
+ && rm -rf /var/lib/apt/lists/*
+
+# ---------------------------------------------------------------------------
+#
+# 3. The two that have to be compiled. This is the reason for the image.
+#
+# libmicrohttpd - the HTTP server the REST layer sits on.
+RUN curl -fsSL "https://ftp.gnu.org/gnu/libmicrohttpd/libmicrohttpd-${MHD_VERSION}.tar.gz" -o /tmp/mhd.tar.gz \
+ && tar -xzf /tmp/mhd.tar.gz -C /tmp \
+ && cd "/tmp/libmicrohttpd-${MHD_VERSION}" \
+ && ./configure --disable-doc --disable-examples --disable-https \
+ && make -j"$(nproc)" && make install \
+ && ldconfig \
+ && rm -rf "/tmp/libmicrohttpd-${MHD_VERSION}" /tmp/mhd.tar.gz
+
+# mongo-c driver v2 - required by the mongoc DB plugin (pkg-config: mongoc2).
+RUN git clone --depth 1 --branch "${MONGOC_VERSION}" \
+      https://github.com/mongodb/mongo-c-driver.git /tmp/mongo-c \
+ && cmake -S /tmp/mongo-c -B /tmp/mongo-c/build \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DENABLE_TESTS=OFF -DENABLE_EXAMPLES=OFF -DBUILD_TESTING=OFF \
+ && cmake --build /tmp/mongo-c/build -j"$(nproc)" \
+ && cmake --install /tmp/mongo-c/build \
+ && ldconfig \
+ && rm -rf /tmp/mongo-c
+
+# ---------------------------------------------------------------------------
+#
+# 4. Prove the environment is complete while building it, not on first use.
+#
+# A missing package should fail HERE, with a name, rather than three minutes
+# into a functest run as an unreadable teardown error.
+#
+RUN set -eux; \
+    pkg-config --exists mongoc2       || { echo "FATAL: mongoc2 not visible to pkg-config"; exit 1; }; \
+    pkg-config --exists libmicrohttpd || { echo "FATAL: libmicrohttpd not visible to pkg-config"; exit 1; }; \
+    for cmd in cmake gcc git curl jq python3 psql mongosh pkill pgrep killall timeout openssl; do \
+      command -v "$cmd" >/dev/null || { echo "FATAL: $cmd missing"; exit 1; }; \
+    done; \
+    echo "environment complete"
+
+WORKDIR /work
+CMD ["/bin/bash"]
