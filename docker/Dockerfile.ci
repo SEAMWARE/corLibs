@@ -71,8 +71,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #                        exist. libmosquitto-dev above is the link-time library
 #                        and does NOT bring it.
 #
+#
+# socat: CI runs the databases and the @context server as service containers,
+# which a container job reaches by NAME - but 36 tests hardcode
+# http://localhost:7080/jsonldContexts/..., and that URL comes back in Link
+# headers, so it is part of what they assert. A forward from localhost:7080 to
+# the service is what lets those tests run unmodified in both places.
+#
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      python3 coreutils postgresql-client jq procps psmisc openssl mosquitto \
+      python3 coreutils postgresql-client jq procps psmisc openssl mosquitto socat \
     && rm -rf /var/lib/apt/lists/*
 
 # mongosh - the harness drops databases and DETECTS whether the mongo it is
