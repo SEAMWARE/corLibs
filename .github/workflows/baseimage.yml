@@ -35,7 +35,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: coraine-ci
+  IMAGE_NAME: ci
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
