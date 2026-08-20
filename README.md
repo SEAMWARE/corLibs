@@ -1,10 +1,21 @@
 # corLibs
 
 Umbrella build for the **k-libs** and **Cor-Libs** that the coraine (NGSI-LD
-context broker) links against. This repo is not a library itself — it is a
-thin orchestration layer: a makefile that builds each sibling library in
-dependency order and collects the resulting archives, shared objects and test
-tooling into `lib/` and `bin/`.
+context broker) links against. **This repo contains no library.** What it holds is
+everything one needs to know to assemble the stack:
+
+- **which repositories make it up**, and in which order they build — `bootstrap.sh`
+  and the makefile, which collect the archives, shared objects and test tooling
+  into `lib/` and `bin/`
+- **at which versions** — `klib-pins`, the single source of truth for the k-lib
+  refs, read by `bootstrap.sh` and by the broker's own Dockerfile
+- **what environment that build needs** — `docker/Dockerfile.ci`, published as
+  **`quay.io/coraine/ci`** and used by every cor repo's CI
+
+That last one lives here for the same reason as the first two: the image exists to
+satisfy exactly the dependencies `bootstrap.sh` assumes. Kept in a repo of its own,
+the two would have to agree about mongo-c v2 forever — and the day they disagree is
+the day CI passes against a toolchain nobody ships.
 
 All libraries live as **separate sibling repos under `~/git`**. corLibs drives
 them; it does not vendor them.
