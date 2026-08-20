@@ -40,6 +40,15 @@ install-local:
 	@cat $(ROOT)/corTest/corTestFunctions.sh > $(BIN_DIR)/corTestFunctions.sh
 	@cat $(ROOT)/corTest/corDiff > $(BIN_DIR)/corDiff && chmod +x $(BIN_DIR)/corDiff
 	@cat $(ROOT)/corTest/corDiffGui > $(BIN_DIR)/corDiffGui && chmod +x $(BIN_DIR)/corDiffGui
+#
+# kjson belongs beside corTest, not merely near it. corCurl pipes every JSON
+# response through `kjson -sort` before comparison - member order is insertion
+# order and none of a test's business - and every expect in every suite was
+# captured that way. A corTest without a kjson is a corTest that fails 611 of 612
+# tests on member order, which is precisely what CI did before this line existed.
+# Having one now implies having the other: one directory on PATH, both tools.
+#
+	@if [ -x $(ROOT)/kjson/bin/kjson ]; then 	   cat $(ROOT)/kjson/bin/kjson > $(BIN_DIR)/kjson && chmod +x $(BIN_DIR)/kjson; 	 else 	   echo "WARNING: $(ROOT)/kjson/bin/kjson not built - corTest will refuse to run"; 	 fi
 	@for dir in $(DIRS); do \
 	  for f in $(ROOT)/$$dir/lib*.so $(ROOT)/$$dir/lib*.a; do \
 	    [ -f "$$f" ] && cat "$$f" > $(LIB_DIR)/$$(basename "$$f"); \
