@@ -25,12 +25,14 @@ on:
   pull_request:
     paths:
       - docker/Dockerfile.ci
+      - docker/Dockerfile.ci-nightly
       - .github/workflows/baseimage.yml
   push:
     branches:
       - main
     paths:
       - docker/Dockerfile.ci
+      - docker/Dockerfile.ci-nightly
       - .github/workflows/baseimage.yml
   workflow_dispatch:
 
@@ -86,6 +88,24 @@ jobs:
           tags: |
             quay.io/coraine/${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.date_sha }}
             quay.io/coraine/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      #
+      # The nightly image is FROM the one just built, so it must come after - and
+      # it is only worth building when the base was actually published, since it
+      # pulls it by tag.
+      #
+      - name: Build and push the nightly image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.ci-nightly
+          push: true
+          tags: |
+            quay.io/coraine/${{ env.IMAGE_NAME }}-nightly:${{ steps.tags.outputs.date_sha }}
+            quay.io/coraine/${{ env.IMAGE_NAME }}-nightly:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
