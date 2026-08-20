@@ -65,7 +65,7 @@ The pinned versions known to build together:
 | kalloc | `release/0.10.1`| | kargs    | `release/0.10`   |
 | klog   | `release/0.10`  | | ktrace   | `release/0.10`   |
 | khash  | `release/0.10`  | | kprom    | `release/0.1.0`  |
-| corRest / corJsonld / corPlugin / corNgsild / corTest | `master` | | | |
+| corRest / corJsonld / corPlugin / corNgsild / corTest | `main` | | | |
 
 ## Quick start
 

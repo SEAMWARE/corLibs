@@ -52,7 +52,7 @@ PINS="$HERE/klib-pins"
 #
 # repo : host : ref
 #
-# The cor* repos track master: they move together, and a pin between them would
+# The cor* repos track main: they move together, and a pin between them would
 # only ever be stale. corLibs itself is deliberately absent - you are standing
 # in it.
 #
@@ -63,11 +63,11 @@ while read -r repo ref; do
 done < <(sed 's/#.*//' "$PINS")
 
 REPOS+=(
-  "corPlugin:github:master"
-  "corRest:github:master"
-  "corJsonld:github:master"
-  "corNgsild:github:master"
-  "corTest:github:master"
+  "corPlugin:github:main"
+  "corRest:github:main"
+  "corJsonld:github:main"
+  "corNgsild:github:main"
+  "corTest:github:main"
 )
 
 urlFor()
@@ -102,7 +102,7 @@ for entry in "${REPOS[@]}"; do
   if [ -d "$BASE/$repo/.git" ]; then
     git -C "$BASE/$repo" fetch --all --quiet
     git -C "$BASE/$repo" checkout --quiet "$ref"
-    # A pinned release branch has nothing to pull; master might. Never merge.
+    # A pinned release branch has nothing to pull; main might. Never merge.
     git -C "$BASE/$repo" pull --ff-only --quiet || true
   else
     git clone --quiet --branch "$ref" "$(urlFor "$repo" "$host")" "$BASE/$repo"

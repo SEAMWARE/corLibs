@@ -28,7 +28,7 @@ on:
       - .github/workflows/baseimage.yml
   push:
     branches:
-      - master
+      - main
     paths:
       - docker/Dockerfile.ci
       - .github/workflows/baseimage.yml
