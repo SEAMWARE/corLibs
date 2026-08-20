@@ -84,8 +84,8 @@ jobs:
           file: docker/Dockerfile.ci
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            quay.io/seamware/${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.date_sha }}
-            quay.io/seamware/${{ env.IMAGE_NAME }}:latest
+            quay.io/coraine/${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.date_sha }}
+            quay.io/coraine/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -97,7 +97,7 @@ jobs:
       - name: Verify the image can build and test
         if: github.event_name != 'pull_request'
         run: |
-          docker run --rm quay.io/seamware/${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.date_sha }} \
+          docker run --rm quay.io/coraine/${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.date_sha }} \
             bash -c 'set -eux;
               pkg-config --modversion mongoc2;
               pkg-config --modversion libmicrohttpd;
@@ -112,7 +112,7 @@ jobs:
             echo "### CI base image"
             echo
             if [ "${{ github.event_name }}" != pull_request ]; then
-              echo "Published \`quay.io/seamware/${{ env.IMAGE_NAME }}\`:"
+              echo "Published \`quay.io/coraine/${{ env.IMAGE_NAME }}\`:"
               echo "- \`${{ steps.tags.outputs.date_sha }}\` (pin to this)"
               echo "- \`latest\`"
             else
