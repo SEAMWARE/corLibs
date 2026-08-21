@@ -46,7 +46,7 @@ ARG MHD_VERSION=1.0.2
 RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential cmake git pkg-config ca-certificates curl gnupg \
       libssl-dev libgeos-dev libmosquitto-dev libpq-dev libicu-dev \
-      libsasl2-dev libzstd-dev zlib1g-dev \
+      libsasl2-dev libzstd-dev zlib1g-dev libgnutls28-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
@@ -97,10 +97,16 @@ RUN curl -fsSL https://pgp.mongodb.com/server-8.0.asc \
 # 3. The two that have to be compiled. This is the reason for the image.
 #
 # libmicrohttpd - the HTTP server the REST layer sits on.
+#
+# WITH https: the functional suite has tests that serve TLS (notification
+# endpoints over https, mqtts) through this library, and --disable-https makes
+# those daemons impossible to create. The mock exits, its port never opens, and
+# the failure reads as "port not ready" - which says nothing about a missing
+# feature in a dependency. gnutls is the backend MHD uses for it.
 RUN curl -fsSL "https://ftp.gnu.org/gnu/libmicrohttpd/libmicrohttpd-${MHD_VERSION}.tar.gz" -o /tmp/mhd.tar.gz \
  && tar -xzf /tmp/mhd.tar.gz -C /tmp \
  && cd "/tmp/libmicrohttpd-${MHD_VERSION}" \
- && ./configure --disable-doc --disable-examples --disable-https \
+ && ./configure --disable-doc --disable-examples \
  && make -j"$(nproc)" && make install \
  && ldconfig \
  && rm -rf "/tmp/libmicrohttpd-${MHD_VERSION}" /tmp/mhd.tar.gz
@@ -126,6 +132,10 @@ RUN git clone --depth 1 --branch "${MONGOC_VERSION}" \
 RUN set -eux; \
     pkg-config --exists mongoc2       || { echo "FATAL: mongoc2 not visible to pkg-config"; exit 1; }; \
     pkg-config --exists libmicrohttpd || { echo "FATAL: libmicrohttpd not visible to pkg-config"; exit 1; }; \
+    grep -q "define MHD_HTTPS_REQUIRE_TLS" /usr/local/include/microhttpd.h \
+      || nm -D /usr/local/lib/libmicrohttpd.so | grep -q MHD_USE_TLS \
+      || ldd /usr/local/lib/libmicrohttpd.so | grep -q gnutls \
+      || { echo "FATAL: libmicrohttpd has no TLS - the https tests cannot run"; exit 1; }; \
     for cmd in cmake gcc git curl jq python3 psql mongosh pkill pgrep killall timeout openssl mosquitto; do \
       command -v "$cmd" >/dev/null || { echo "FATAL: $cmd missing"; exit 1; }; \
     done; \
