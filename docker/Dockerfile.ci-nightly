@@ -28,15 +28,18 @@ ENV DEBIAN_FRONTEND=noninteractive
 # valgrind - the suite runs the broker under it and fails on definite/indirect leaks.
 # python3-pip + gcovr - the coverage report; gcovr is not packaged in a version we
 # want to depend on, so it comes from pip, pinned.
+# wrk: the nightly performance run. A load generator belongs in the image rather
+# than being apt-installed per run - and pinning it here means today's numbers are
+# comparable with last week's, which is the entire point of recording them.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      valgrind python3-pip python3-venv \
+      valgrind python3-pip python3-venv wrk \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install --break-system-packages --no-cache-dir 'gcovr==8.2'
 
 # Same principle as the base image: prove it here, with a name, rather than three
 # minutes into a nightly run.
 RUN set -eux; \
-    for cmd in valgrind gcovr python3; do \
+    for cmd in valgrind gcovr python3 wrk; do \
       command -v "$cmd" >/dev/null || { echo "FATAL: $cmd missing"; exit 1; }; \
     done; \
     valgrind --version; gcovr --version | head -1; \
