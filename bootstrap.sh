@@ -70,6 +70,58 @@ REPOS+=(
   "corTest:github:main"
 )
 
+#
+# gitRetry <label> <command...> - a hiccup at the far end is not a build failure
+#
+# gitlab.com answers 502 often enough to kill a run on its own: the URL is fine,
+# the server briefly was not, and the same clone succeeds seconds later. A CI
+# runner shares its egress IP with a great many others, which is why this is seen
+# there and almost never on a workstation.
+#
+# Five attempts, pausing 3s, 6s, 12s, 24s. The worst case costs 45 seconds; the
+# alternative is a red pipeline and a human deciding whether to press the button.
+#
+gitRetry()
+{
+  local label="$1"; shift
+  local attempt=1 pause=3
+  local max=5
+
+  while :; do
+    if "$@"; then
+      return 0
+    fi
+
+    if [ "$attempt" -ge "$max" ]; then
+      echo ">>> $label: giving up after $max attempts" >&2
+      return 1
+    fi
+
+    echo ">>> $label: attempt $attempt failed - retrying in ${pause}s" >&2
+    sleep "$pause"
+    attempt=$(( attempt + 1 ))
+    pause=$(( pause * 2 ))
+  done
+}
+
+
+#
+# cloneFresh <url> <ref> <dir> - clone, from nothing, every time
+#
+# A clone that dies part way leaves the directory behind, and the next attempt
+# would fail on "already exists" rather than on whatever really went wrong. The
+# directory is known not to be a repo here (its .git was checked), so removing
+# it destroys nothing.
+#
+cloneFresh()
+{
+  local url="$1" ref="$2" dir="$3"
+
+  rm -rf "$dir"
+  git clone --quiet --branch "$ref" "$url" "$dir"
+}
+
+
 urlFor()
 {
   local repo="$1" host="$2"
@@ -100,12 +152,12 @@ for entry in "${REPOS[@]}"; do
   echo ">>> $repo ($host, $ref)"
 
   if [ -d "$BASE/$repo/.git" ]; then
-    git -C "$BASE/$repo" fetch --all --quiet
+    gitRetry "$repo fetch" git -C "$BASE/$repo" fetch --all --quiet
     git -C "$BASE/$repo" checkout --quiet "$ref"
     # A pinned release branch has nothing to pull; main might. Never merge.
     git -C "$BASE/$repo" pull --ff-only --quiet || true
   else
-    git clone --quiet --branch "$ref" "$(urlFor "$repo" "$host")" "$BASE/$repo"
+    gitRetry "$repo clone" cloneFresh "$(urlFor "$repo" "$host")" "$ref" "$BASE/$repo"
   fi
 done
 
