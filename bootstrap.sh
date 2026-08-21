@@ -73,34 +73,54 @@ REPOS+=(
 #
 # gitRetry <label> <command...> - a hiccup at the far end is not a build failure
 #
-# gitlab.com answers 502 often enough to kill a run on its own: the URL is fine,
-# the server briefly was not, and the same clone succeeds seconds later. A CI
-# runner shares its egress IP with a great many others, which is why this is seen
-# there and almost never on a workstation.
+# gitlab.com answered 502 mid-run and took the whole pipeline with it. The URL
+# was never wrong: the same clone of the same branch succeeds seconds later, and
+# what git actually asks for - .git/info/refs?service=git-upload-pack - answers
+# 200. A CI runner shares its egress IP with a great many others, which is why
+# this is seen there and hardly ever on a workstation.
 #
-# Five attempts, pausing 3s, 6s, 12s, 24s. The worst case costs 45 seconds; the
-# alternative is a red pipeline and a human deciding whether to press the button.
+# It keeps trying for TEN MINUTES, not for a fixed number of attempts. The
+# asymmetry is the whole point: giving up does not cost the remaining seconds of
+# a retry, it costs the entire job from the beginning - plus however long it
+# takes a human to notice a red run and decide to press the button. Ten minutes
+# of patience here is cheaper than the restart it avoids, and it is time that
+# would have been spent waiting anyway.
+#
+# Backoff 3, 6, 12, 24, 48 then a minute between attempts, so a long outage is
+# not hammered and a short one is caught almost at once.
+#
+# COR_GIT_RETRY_SECONDS overrides the deadline (0 disables retrying entirely).
 #
 gitRetry()
 {
   local label="$1"; shift
+  local budget=${COR_GIT_RETRY_SECONDS:-600}
+  local deadline=$(( $(date +%s) + budget ))
   local attempt=1 pause=3
-  local max=5
 
   while :; do
     if "$@"; then
+      [ "$attempt" -gt 1 ] && echo ">>> $label: succeeded on attempt $attempt"
       return 0
     fi
 
-    if [ "$attempt" -ge "$max" ]; then
-      echo ">>> $label: giving up after $max attempts" >&2
+    local left=$(( deadline - $(date +%s) ))
+    if [ "$left" -le 0 ]; then
+      local s=s; [ "$attempt" = 1 ] && s=
+      echo ">>> $label: giving up after $attempt attempt$s over ${budget}s" >&2
       return 1
     fi
 
-    echo ">>> $label: attempt $attempt failed - retrying in ${pause}s" >&2
-    sleep "$pause"
+    # Never sleep past the deadline - but do spend what is left of it, so the
+    # last attempt happens AT the ten-minute mark rather than a minute short.
+    local nap=$pause
+    [ "$nap" -gt "$left" ] && nap=$left
+
+    echo ">>> $label: attempt $attempt failed - retrying in ${nap}s (${left}s left)" >&2
+    sleep "$nap"
     attempt=$(( attempt + 1 ))
-    pause=$(( pause * 2 ))
+    [ "$pause" -lt 60 ] && pause=$(( pause * 2 ))
+    [ "$pause" -gt 60 ] && pause=60
   done
 }
 
