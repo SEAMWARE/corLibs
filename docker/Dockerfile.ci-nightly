@@ -17,7 +17,13 @@
 # Copyright 2026 Seamware
 # SPDX-License-Identifier: Apache-2.0
 #
-FROM quay.io/coraine/ci:latest
+#
+# The tag is passed in, never "latest": this image must be built FROM the exact
+# base that was just published, and a moving tag would let the two drift apart
+# between builds.
+#
+ARG BASE_TAG=latest
+FROM quay.io/coraine/ci:${BASE_TAG}
 
 LABEL org.opencontainers.image.title="coraine-ci-nightly" \
       org.opencontainers.image.description="coraine CI image + valgrind + gcovr, for the nightly jobs" \

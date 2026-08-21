@@ -54,13 +54,13 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       #
-      # Two tags, deliberately:
+      # ONE tag, immutable: <yyyy-mm-dd>-<sha>.
       #
-      #   <yyyy-mm-dd>-<sha>  immutable, what a consumer pins to
-      #   latest              convenience, moves
-      #
-      # Consumers should pin. A base image that changes under a build is a
-      # green run that proves nothing about the next one.
+      # There is deliberately no "latest". A base image that moves under a build
+      # is a green run that proves nothing about the next one - and a consumer
+      # that CAN follow a moving tag eventually will, so the tag does not exist.
+      # Adopting a new image is a one-line change in the consumer: reviewable,
+      # and bisectable, because the run that first used an image is a commit.
       #
       - name: Compute tags
         id: tags
@@ -85,9 +85,7 @@ jobs:
           context: .
           file: docker/Dockerfile.ci
           push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            quay.io/coraine/${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.date_sha }}
-            quay.io/coraine/${{ env.IMAGE_NAME }}:latest
+          tags: quay.io/coraine/${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.date_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -103,9 +101,8 @@ jobs:
           context: .
           file: docker/Dockerfile.ci-nightly
           push: true
-          tags: |
-            quay.io/coraine/${{ env.IMAGE_NAME }}-nightly:${{ steps.tags.outputs.date_sha }}
-            quay.io/coraine/${{ env.IMAGE_NAME }}-nightly:latest
+          build-args: BASE_TAG=${{ steps.tags.outputs.date_sha }}
+          tags: quay.io/coraine/${{ env.IMAGE_NAME }}-nightly:${{ steps.tags.outputs.date_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -132,9 +129,11 @@ jobs:
             echo "### CI base image"
             echo
             if [ "${{ github.event_name }}" != pull_request ]; then
-              echo "Published \`quay.io/coraine/${{ env.IMAGE_NAME }}\`:"
-              echo "- \`${{ steps.tags.outputs.date_sha }}\` (pin to this)"
-              echo "- \`latest\`"
+              echo "Published:"
+              echo "- \`quay.io/coraine/${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.date_sha }}\`"
+              echo "- \`quay.io/coraine/${{ env.IMAGE_NAME }}-nightly:${{ steps.tags.outputs.date_sha }}\`"
+              echo
+              echo "To adopt, in coraine: set the image tag in .github/workflows/{ci,nightly}.yml to \`${{ steps.tags.outputs.date_sha }}\`"
             else
               echo "Built only — pull requests do not publish."
             fi
