@@ -10,7 +10,7 @@ everything one needs to know to assemble the stack:
 - **at which versions** — `klib-pins`, the single source of truth for the k-lib
   refs, read by `bootstrap.sh` and by the broker's own Dockerfile
 - **what environment that build needs** — `docker/Dockerfile.ci`, published as
-  **`quay.io/coraine/ci`** and used by every cor repo's CI
+  **`quay.io/seamware/coraine-ci`** and used by every cor repo's CI
 
 That last one lives here for the same reason as the first two: the image exists to
 satisfy exactly the dependencies `bootstrap.sh` assumes. Kept in a repo of its own,
