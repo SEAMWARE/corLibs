@@ -23,10 +23,10 @@
 # between builds.
 #
 ARG BASE_TAG=latest
-FROM quay.io/coraine/ci:${BASE_TAG}
+FROM quay.io/seamware/coraine-ci:${BASE_TAG}
 
 LABEL org.opencontainers.image.title="coraine-ci-nightly" \
-      org.opencontainers.image.description="coraine CI image + valgrind + gcovr, for the nightly jobs" \
+      org.opencontainers.image.description="coraine-ci plus what only the nightly jobs need: valgrind, gcovr, wrk, mosquitto" \
       org.opencontainers.image.vendor="Seamware"
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -37,15 +37,30 @@ ENV DEBIAN_FRONTEND=noninteractive
 # wrk: the nightly performance run. A load generator belongs in the image rather
 # than being apt-installed per run - and pinning it here means today's numbers are
 # comparable with last week's, which is the entire point of recording them.
+# mosquitto: the ETSI suite's MQTT Test Purposes need an MQTT broker, and they
+# start it themselves - with a different configuration per test (anonymous, with
+# a user, with a password, on a non-default port), so a fixed service container
+# cannot stand in for it. The suite's first choice is `docker run
+# eclipse-mosquitto`, and a CI job that IS a container has no docker daemon: all
+# twelve MQTT tests then failed at setup with "Connection refused", which reads
+# as a broker fault and is not one. With the daemon in the image the suite's
+# native path can actually run it.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      valgrind python3-pip python3-venv wrk \
+      valgrind python3-pip python3-venv wrk mosquitto \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install --break-system-packages --no-cache-dir 'gcovr==8.2'
+
+# The distribution starts mosquitto as a service on 1883 with its own
+# configuration; the suite starts its own, on the port and with the credentials
+# each test needs. Two daemons on one port is one of them failing to bind, so the
+# packaged service is disabled - the image ships the binary, not a running broker.
+RUN rm -f /etc/systemd/system/multi-user.target.wants/mosquitto.service \
+    && rm -f /etc/init.d/mosquitto
 
 # Same principle as the base image: prove it here, with a name, rather than three
 # minutes into a nightly run.
 RUN set -eux; \
-    for cmd in valgrind gcovr python3 wrk; do \
+    for cmd in valgrind gcovr python3 wrk mosquitto; do \
       command -v "$cmd" >/dev/null || { echo "FATAL: $cmd missing"; exit 1; }; \
     done; \
     valgrind --version; gcovr --version | head -1; \
