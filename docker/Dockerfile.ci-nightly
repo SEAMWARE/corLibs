@@ -45,10 +45,29 @@ ENV DEBIAN_FRONTEND=noninteractive
 # twelve MQTT tests then failed at setup with "Connection refused", which reads
 # as a broker fault and is not one. With the daemon in the image the suite's
 # native path can actually run it.
+#
+# The pin has a FLOOR, not just a version: it must be 8.3 or later. gcov reports a
+# negative hit count now and then for a threaded binary (GCC bug 68080), and gcovr
+# treats that as fatal - a fifty-minute coverage run then ends with no report at
+# all. coraine's makefile passes --gcov-ignore-parse-errors=negative_hits.* for
+# exactly that, but in 8.2 that option is honoured only by the TEXT .gcov parser,
+# while gcovr asks gcov for JSON by default and the JSON reader builds its counts
+# with no such check. The flag was therefore inert, and the nightly of 2026-08-25
+# died on a negative BRANCH count with the flag on the command line. 8.3 is where
+# the JSON parser started routing line, branch and condition counts through the
+# same check; 8.6 is the first to name python 3.14, which is what this image has.
+#
+# Both halves were reproduced against a crafted gcov JSON carrying one negative
+# branch count: 8.2 dies with the flag on the command line, 8.6 warns and counts
+# the branch as untaken. The flag is load-bearing on 8.6 as well, and in a new
+# way - WITHOUT it, 8.6 does not fail, it drops the whole affected FILE from the
+# report and exits 0. A silently short coverage figure is the one outcome worse
+# than none, so the makefile's flag and this floor belong together.
+#
 RUN apt-get update && apt-get install -y --no-install-recommends \
       valgrind python3-pip python3-venv wrk mosquitto \
     && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --break-system-packages --no-cache-dir 'gcovr==8.2'
+    && pip3 install --break-system-packages --no-cache-dir 'gcovr==8.6'
 
 # The distribution starts mosquitto as a service on 1883 with its own
 # configuration; the suite starts its own, on the port and with the credentials
