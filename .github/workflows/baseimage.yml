@@ -26,6 +26,7 @@ on:
     paths:
       - docker/Dockerfile.ci
       - docker/Dockerfile.ci-nightly
+      - docker/Dockerfile.mongo-rs
       - .github/workflows/baseimage.yml
   push:
     branches:
@@ -33,6 +34,7 @@ on:
     paths:
       - docker/Dockerfile.ci
       - docker/Dockerfile.ci-nightly
+      - docker/Dockerfile.mongo-rs
       - .github/workflows/baseimage.yml
   workflow_dispatch:
 
@@ -107,6 +109,60 @@ jobs:
           cache-to: type=gha,mode=max
 
       #
+      # The mongo service image, and it is a service image rather than a base:
+      # nothing builds inside it. It is mongo:8.0 with --replSet on the command
+      # line, because a workflow `services:` block cannot pass a command and the
+      # HA cache sync needs an oplog to watch. It rides along here because this
+      # is where a Dockerfile in this repo gets published, not because it has
+      # anything to do with the build environment.
+      #
+      # Same immutable <date>-<sha> tag as the other two, from the same run, so
+      # adopting a set of images is one bump rather than three.
+      #
+      - name: Build and push the mongo replica-set image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.mongo-rs
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: quay.io/seamware/mongo-rs:${{ steps.tags.outputs.date_sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      #
+      # The property every consumer depends on, asserted here so a consumer does
+      # not discover it: the image comes up, the set INITIATES, and isMaster then
+      # reports a setName - which is the exact probe coraine's harness uses to
+      # decide whether the HA tests are in the run set.
+      #
+      - name: Verify the mongo image is an initiable replica set
+        if: github.event_name != 'pull_request'
+        run: |
+          set -eu
+          img=quay.io/seamware/mongo-rs:${{ steps.tags.outputs.date_sha }}
+          docker run -d --name mongo-rs-probe "$img"
+          trap 'docker rm -f mongo-rs-probe >/dev/null 2>&1 || true' EXIT
+
+          for i in $(seq 1 30); do
+            docker exec mongo-rs-probe mongosh --quiet --eval 'db.runCommand({ping:1}).ok' >/dev/null 2>&1 && break
+            [ "$i" = 30 ] && { echo "mongod never answered"; exit 1; }
+            sleep 2
+          done
+
+          docker exec mongo-rs-probe mongosh --quiet --eval \
+            'rs.initiate({_id: "rs0", members: [{_id: 0, host: "localhost:27017"}]})'
+
+          for i in $(seq 1 30); do
+            [ "$(docker exec mongo-rs-probe mongosh --quiet --eval 'db.adminCommand({isMaster:1}).ismaster')" = true ] && break
+            [ "$i" = 30 ] && { echo "the set never elected a primary"; exit 1; }
+            sleep 2
+          done
+
+          name=$(docker exec mongo-rs-probe mongosh --quiet --eval 'db.adminCommand({isMaster:1}).setName')
+          [ "$name" = rs0 ] || { echo "setName is '$name', expected rs0"; exit 1; }
+          echo "single-node replica set rs0 is PRIMARY"
+
+      #
       # The Dockerfile's last layer already asserts the environment is complete.
       # This repeats it against the built image so the check also covers a
       # cached build, where that layer may not have re-run.
@@ -132,6 +188,7 @@ jobs:
               echo "Published:"
               echo "- \`quay.io/seamware/${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.date_sha }}\`"
               echo "- \`quay.io/seamware/${{ env.IMAGE_NAME }}-nightly:${{ steps.tags.outputs.date_sha }}\`"
+              echo "- \`quay.io/seamware/mongo-rs:${{ steps.tags.outputs.date_sha }}\`"
               echo
               echo "To adopt, in coraine: set the image tag in .github/workflows/{ci,nightly}.yml to \`${{ steps.tags.outputs.date_sha }}\`"
             else

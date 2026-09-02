@@ -1,0 +1,40 @@
+# Dockerfile.mongo-rs - mongo:8.0, started as a single-node REPLICA SET.
+#
+# WHAT THIS IS: the stock upstream image with one thing changed - the command.
+# No packages, no configuration, no data. If it ever needs a second line of
+# content, it is the wrong shape and should be reconsidered.
+#
+# WHY IT EXISTS: the HA cache sync (`--high-availability mongo`) rides on a
+# mongo CHANGE STREAM, and a change stream reads the oplog - which a standalone
+# mongod does not have. The harness detects that (corTestParams.sh probes
+# isMaster.setName) and leaves ha_cache_sync.test out of the run set on a
+# standalone, silently: nothing in the log says the HA paths went unexercised.
+#
+# Every CI job ran a standalone, so nothing ever entered them - 108 lines and
+# 10 functions of coraine, which the published coverage figure then reported as
+# untested CODE rather than as an environment we had not stood up.
+#
+# WHY IT CANNOT BE DONE IN THE WORKFLOW: a GitHub Actions `services:` block
+# passes docker-create OPTIONS but not a COMMAND, so `--replSet` cannot be
+# appended to mongo:8.0 from a workflow, and the job container has mongosh but
+# no mongod of its own to start instead. Two lines here, and every consumer
+# keeps using an ordinary service container.
+#
+# WHAT THIS IMAGE DELIBERATELY DOES NOT DO: initiate the set. A mongod started
+# with --replSet and never initiated answers every write with
+# NotYetInitialized, so somebody must call rs.initiate() once it is up - but the
+# member host has to be the name the CLIENTS use to reach it, and this image
+# cannot know that name. It is one mongosh call in the consumer, beside the
+# wait-for-database it already does.
+#
+# ONE MEMBER is the whole point. This is not a test of replication; it is the
+# smallest thing that has an oplog.
+#
+FROM mongo:8.0
+
+#
+# The upstream entrypoint prepends `mongod` only when the command starts with a
+# dash, so the binary is named explicitly. --bind_ip_all because a replica-set
+# member is addressed by the name its clients use, not by localhost.
+#
+CMD ["mongod", "--replSet", "rs0", "--bind_ip_all"]
