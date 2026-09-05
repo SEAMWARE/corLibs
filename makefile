@@ -21,8 +21,13 @@ ROOT ?= $(abspath $(dir $(lastword $(MAKEFILE_LIST)))..)
 # k-libs (foundation, no Cor-Lib dependencies)
 K_DIRS = kbase klog ktrace kalloc kjson khash kprom kargs
 
+#
 # Cor-Libs (depend on k-libs and each other)
-COR_DIRS = corRest corJsonld corPlugin corNgsild
+#
+# corHttp comes FIRST: corRest links it when built with COR_HTTP_SERVER=builtin,
+# and this loop is ordered.
+#
+COR_DIRS = corHttp corRest corJsonld corPlugin corNgsild
 
 DIRS = $(K_DIRS) $(COR_DIRS)
 
