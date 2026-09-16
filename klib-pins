@@ -11,7 +11,7 @@
 # Format: <repo> <ref>, one per line. Blank lines and #-comments ignored.
 #
 kbase   release/0.11
-kalloc  release/0.10.1
+kalloc  release/0.10.2
 khash   release/0.10
 kjson   release/0.14.0
 kargs   release/0.10
