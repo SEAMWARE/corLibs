@@ -10,7 +10,7 @@
 #
 # Format: <repo> <ref>, one per line. Blank lines and #-comments ignored.
 #
-kbase   release/0.10
+kbase   release/0.11
 kalloc  release/0.10.1
 klog    release/0.10
 khash   release/0.10
