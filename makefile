@@ -19,7 +19,7 @@
 ROOT ?= $(abspath $(dir $(lastword $(MAKEFILE_LIST)))..)
 
 # k-libs (foundation, no Cor-Lib dependencies)
-K_DIRS = kbase klog ktrace kalloc kjson khash kprom kargs
+K_DIRS = kbase ktrace kalloc kjson khash kprom kargs
 
 #
 # Cor-Libs (depend on k-libs and each other)
