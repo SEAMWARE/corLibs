@@ -13,7 +13,7 @@
 kbase   release/0.11
 kalloc  release/0.10.2
 khash   release/0.10
-kjson   release/0.14.0
+kjson   release/0.14.1
 kargs   release/0.10.1
 ktrace  release/0.10
 kprom   release/0.1.1
