@@ -27,7 +27,15 @@ K_DIRS = kbase ktrace kalloc kjson khash kprom kargs
 # corHttp comes FIRST: corRest links it when built with COR_HTTP_SERVER=builtin,
 # and this loop is ordered.
 #
-COR_DIRS = corHttp corBridge corRest corJsonld corPlugin corNgsild
+#
+# corDdsBridge is LAST and gates itself. It is a bridge plugin, not a library
+# anything links, and the eProsima stack it needs is 21.4 MiB across nine
+# libraries - so it must never be a hard dependency of a coraine build. Its own
+# makefile decides: built where the DDS Enabler is installed, skipped with a
+# printed reason where it is not, and COR_BRIDGE_DDS=ON turns a missing
+# dependency into an error for anyone who meant it.
+#
+COR_DIRS = corHttp corBridge corRest corJsonld corPlugin corNgsild corDdsBridge
 
 DIRS = $(K_DIRS) $(COR_DIRS)
 
@@ -54,10 +62,18 @@ install-local:
 # Having one now implies having the other: one directory on PATH, both tools.
 #
 	@if [ -x $(ROOT)/kjson/bin/kjson ]; then 	   cat $(ROOT)/kjson/bin/kjson > $(BIN_DIR)/kjson && chmod +x $(BIN_DIR)/kjson; 	 else 	   echo "WARNING: $(ROOT)/kjson/bin/kjson not built - corTest will refuse to run"; 	 fi
+#
+# The `|| true` is load-bearing. A directory with no lib*.so or lib*.a leaves
+# the glob unexpanded, the [ -f ] fails, and because that test is the LAST
+# command of the loop body its exit status becomes the recipe's - so one such
+# directory fails the whole install. corDdsBridge is exactly that: it builds
+# dds.so, a plugin, which nothing links and which does not belong in lib/.
+#
 	@for dir in $(DIRS); do \
 	  for f in $(ROOT)/$$dir/lib*.so $(ROOT)/$$dir/lib*.a; do \
 	    [ -f "$$f" ] && cat "$$f" > $(LIB_DIR)/$$(basename "$$f"); \
 	  done; \
+	  true; \
 	done
 	@echo "Installed: bin/ lib/"
 
