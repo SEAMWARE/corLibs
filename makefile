@@ -27,7 +27,7 @@ K_DIRS = kbase ktrace kalloc kjson khash kprom kargs
 # corHttp comes FIRST: corRest links it when built with COR_HTTP_SERVER=builtin,
 # and this loop is ordered.
 #
-COR_DIRS = corHttp corRest corJsonld corPlugin corNgsild
+COR_DIRS = corHttp corBridge corRest corJsonld corPlugin corNgsild
 
 DIRS = $(K_DIRS) $(COR_DIRS)
 
