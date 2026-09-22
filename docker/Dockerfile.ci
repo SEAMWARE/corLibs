@@ -124,6 +124,110 @@ RUN git clone --depth 1 --branch "${MONGOC_VERSION}" \
 
 # ---------------------------------------------------------------------------
 #
+# 3a. The third thing that has to be compiled, and much the most expensive:
+#     the eProsima DDS stack.
+#
+# foonathan_memory, Fast CDR, Fast DDS, dev-utils, DDS-Pipe and the FIWARE DDS
+# Enabler, built with colcon. It is the same argument as the two above, only
+# louder: those are a couple of minutes and this is EIGHT, and it was being
+# paid by every build of the DDS image, every night.
+#
+# It is here rather than in a DDS base image of its own for the reason this
+# file already gives for ubuntu: a third environment in the middle is where
+# environment-sensitive bugs hide. One base, one toolchain - the stack the
+# bridge is compiled against is the stack the shipped image carries, and the
+# soname question that comes of building on one release and running on another
+# does not arise.
+#
+# ⭐ THE VERSIONS ARE NOT NAMED HERE. corDdsBridge/ddsenabler-pinned.repos is
+# the single source of truth for which eProsima releases the bridge is built
+# against - the relationship klib-pins has with the k-libs - so it is FETCHED
+# rather than restated. Two copies of a version pin are how they come to
+# disagree at the worst possible moment.
+#
+# ⛔ And it pins RELEASES, not branches. eProsima's own ddsenabler.repos names
+# master/main, so importing that builds whatever those branches held that
+# morning: a commit of theirs could redden this image with no change of ours,
+# looking exactly like our bug.
+#
+ARG CORDDSBRIDGE_REF=main
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      libasio-dev libtinyxml2-dev libyaml-cpp-dev nlohmann-json3-dev python3-pip \
+ && rm -rf /var/lib/apt/lists/* \
+ && pip3 install --break-system-packages --no-cache-dir colcon-common-extensions vcstool
+
+#
+# --merge-install puts everything under one install/lib and install/include
+# instead of install/<pkg>/..., which makes the copy below a copy rather than a
+# glob that has to be right about colcon's layout.
+#
+# cp -a, and not cp: libfastdds.so, .so.3.6 and .so.3.6.2.0 are one 16 MiB
+# library and two links to it. A copy that follows the links writes it three
+# times, which is how the DDS image came out 76 MB larger than the broker when
+# the stack it adds is 21 MiB.
+#
+RUN mkdir -p /tmp/dds/src && cd /tmp/dds \
+ && curl -fsSL "https://raw.githubusercontent.com/SEAMWARE/corDdsBridge/${CORDDSBRIDGE_REF}/ddsenabler-pinned.repos" \
+         -o ddsenabler.repos \
+ && vcs import src < ddsenabler.repos \
+ && echo "--- the DDS stack being built:" \
+ && (cd src && for d in */; do printf "%-28s %s\n" "${d%/}" "$(git -C "$d" describe --tags --always 2>/dev/null)"; done) \
+ && colcon build --merge-install --packages-skip ddsenabler_docs \
+      --event-handlers console_direct+ \
+      --cmake-args -DCMAKE_BUILD_TYPE=Release -DLOG_INFO=ON -DSECURITY=ON \
+ && cp -a install/lib/. /usr/local/lib/ \
+ && cp -a install/include/. /usr/local/include/ \
+ && ldconfig \
+ && cd / && rm -rf /tmp/dds \
+ && du -sh /usr/local/lib
+
+#
+# And the same stack again, staged under /opt/dds - about 21 MiB of it, in an
+# image of 1.4 GB.
+#
+# /usr/local is where it has to be INSTALLED: corDdsBridge's makefile says
+# -I/usr/local/include -L/usr/local/lib, and so does everything else that
+# compiles against eProsima. But the SHIPPED broker image needs the same
+# libraries without the toolchain they were built with, and picking them back
+# out of /usr/local means naming nine libraries in a Dockerfile that has no
+# business knowing what they are called.
+#
+# So the DDS stack says what it consists of, once, here. A `COPY --from` of
+# these two directories is the whole of what another image needs.
+#
+# foonathan_memory is in NEITHER, and it was in both when this was written -
+# both lines failed the build, which is the useful kind of wrong.
+#
+# Here it comes out STATIC (libfoonathan_memory-0.7.4.a), so it is already
+# inside the libraries that use it and there is nothing to ship; and no public
+# Fast DDS header includes it, so nothing compiling against the stack needs its
+# headers either. The DDS image that preceded this did copy a
+# `libfoonathan_memory*.so*`, so the vendor package built it shared there -
+# a different Ubuntu and no CMAKE_BUILD_TYPE. Worth knowing when the stack is
+# moved: what this list needs is whatever `colcon` actually produced, and the
+# build says so rather than guessing.
+#
+RUN mkdir -p /opt/dds/lib /opt/dds/include \
+ && cp -a /usr/local/lib/libfastdds.so*           /opt/dds/lib/ \
+ && cp -a /usr/local/lib/libfastcdr.so*           /opt/dds/lib/ \
+ && cp -a /usr/local/lib/libcpp_utils.so*         /opt/dds/lib/ \
+ && cp -a /usr/local/lib/libddspipe*.so*          /opt/dds/lib/ \
+ && cp -a /usr/local/lib/libddsenabler*.so*       /opt/dds/lib/ \
+ && cp -a /usr/lib/*/libyaml-cpp.so.*             /opt/dds/lib/ \
+ && cp -a /usr/lib/*/libtinyxml2.so.*             /opt/dds/lib/ \
+ && for h in cpp_utils ddsenabler ddsenabler_participants ddsenabler_yaml \
+             ddspipe_core ddspipe_participants ddspipe_yaml \
+             fastcdr fastdds; do \
+      cp -a "/usr/local/include/$h" /opt/dds/include/; \
+    done \
+ && echo "--- the DDS stack, staged for the shipped image:" \
+ && du -sh /opt/dds/lib /opt/dds/include \
+ && ls -la /opt/dds/lib
+
+
+# ---------------------------------------------------------------------------
+#
 # 4. Prove the environment is complete while building it, not on first use.
 #
 # A missing package should fail HERE, with a name, rather than three minutes
@@ -132,6 +236,10 @@ RUN git clone --depth 1 --branch "${MONGOC_VERSION}" \
 RUN set -eux; \
     pkg-config --exists mongoc2       || { echo "FATAL: mongoc2 not visible to pkg-config"; exit 1; }; \
     pkg-config --exists libmicrohttpd || { echo "FATAL: libmicrohttpd not visible to pkg-config"; exit 1; }; \
+    test -f /usr/local/include/ddsenabler/DDSEnabler.hpp \
+      || { echo "FATAL: the DDS Enabler headers are missing - corDdsBridge cannot be built here"; exit 1; }; \
+    test -f /usr/local/lib/libddsenabler.so \
+      || { echo "FATAL: libddsenabler.so is missing"; exit 1; }; \
     grep -q "define MHD_HTTPS_REQUIRE_TLS" /usr/local/include/microhttpd.h \
       || nm -D /usr/local/lib/libmicrohttpd.so | grep -q MHD_USE_TLS \
       || ldd /usr/local/lib/libmicrohttpd.so | grep -q gnutls \
