@@ -64,6 +64,8 @@ done < <(sed 's/#.*//' "$PINS")
 
 REPOS+=(
   "corPlugin:github:main"
+  "corBridge:github:main"
+  "corDdsBridge:github:main"
   "corHttp:github:main"
   "corRest:github:main"
   "corJsonld:github:main"
