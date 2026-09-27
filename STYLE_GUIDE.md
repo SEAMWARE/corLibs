@@ -1,7 +1,7 @@
 # Coding style — the Cor stack
 
-Governs the **k-libs** (`kbase`, `kalloc`, `khash`, `kargs`, `ktrace`), the
-**Cor-Libs** (`corTree`, `corJson`, `corProm`, `corRest`, `corJsonld`,
+Governs the **k-libs** (`kbase`, `kalloc`, `kargs`), the
+**Cor-Libs** (`corLog`, `corHash`, `corTree`, `corJson`, `corProm`, `corRest`, `corJsonld`,
 `corNgsild`, `corPlugin`, `corTest`) and **coraine**. One guide for all of them; where a rule below and
 existing code disagree, the rule wins and the code is wrong.
 
@@ -35,8 +35,8 @@ Groups separated by one blank line, no blank lines inside a group:
 
 1. C system headers
 2. third-party headers
-3. project headers, low-level to high-level (`kbase` → `kalloc` → `corTree` →
-   `corJson` → `khash` → `corRest` → `corJsonld` → `corNgsild`)
+3. project headers, low-level to high-level (`kbase` → `kalloc` → `corLog` → `corTree` →
+   `corJson` → `corHash` → `corRest` → `corJsonld` → `corNgsild`)
 4. **own interface last**, in a `.c`, commented `// Own interface`
 
 ### Every include says what it is for
@@ -112,7 +112,7 @@ twice.
 | pointer variable | name ends in `P` | `treeP`, `childP`, `itemP` |
 | "next" in a walk | `nextP` | |
 | enum member | prefix shared with the enum | `CorObject`, `KatInit` |
-| macro | upper snake | `KT_W`, `K_VEC_SIZE` |
+| macro | upper snake | `COR_W`, `K_VEC_SIZE` |
 
 An allocation parameter is named for what it allocates *into*, not for the fact
 that it allocates.
