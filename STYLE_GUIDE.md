@@ -1,8 +1,8 @@
 # Coding style — the Cor stack
 
-Governs the **k-libs** (`kbase`, `kalloc`, `khash`, `kjson`, `kargs`, `ktrace`,
-`kprom`), the **Cor-Libs** (`corRest`, `corJsonld`, `corNgsild`, `corPlugin`,
-`corTest`) and **coraine**. One guide for all of them; where a rule below and
+Governs the **k-libs** (`kbase`, `kalloc`, `khash`, `kargs`, `ktrace`), the
+**Cor-Libs** (`corTree`, `corJson`, `corProm`, `corRest`, `corJsonld`,
+`corNgsild`, `corPlugin`, `corTest`) and **coraine**. One guide for all of them; where a rule below and
 existing code disagree, the rule wins and the code is wrong.
 
 Every rule here is here because something went wrong without it. Where that is
@@ -35,8 +35,8 @@ Groups separated by one blank line, no blank lines inside a group:
 
 1. C system headers
 2. third-party headers
-3. project headers, low-level to high-level (`kbase` → `kalloc` → `kjson` →
-   `khash` → `corRest` → `corJsonld` → `corNgsild`)
+3. project headers, low-level to high-level (`kbase` → `kalloc` → `corTree` →
+   `corJson` → `khash` → `corRest` → `corJsonld` → `corNgsild`)
 4. **own interface last**, in a `.c`, commented `// Own interface`
 
 ### Every include says what it is for
@@ -46,8 +46,8 @@ A trailing comment naming what the file takes from it:
 ```c
 #include <string.h>                                       // strcmp
 
-#include "kjson/KjNode.h"                                 // KjNode
-#include "kjson/kjBuilder.h"                              // kjChildRemove
+#include "corTree/CorNode.h"                               // CorNode
+#include "corTree/corTreeBuilder.h"                        // corTreeChildRemove
 
 #include "corNgsild/ldStripAtContext.h"                    // Own interface
 ```
@@ -107,11 +107,11 @@ twice.
 
 | Thing | Form | Example |
 |---|---|---|
-| function | `<libPrefix><Verb>` camelCase | `ldStripAtContext`, `kjChildRemove` |
-| type | PascalCase, library-prefixed | `KjNode`, `LdRegCacheItem` |
+| function | `<libPrefix><Verb>` camelCase | `ldStripAtContext`, `corTreeChildRemove` |
+| type | PascalCase, library-prefixed | `CorNode`, `LdRegCacheItem` |
 | pointer variable | name ends in `P` | `treeP`, `childP`, `itemP` |
 | "next" in a walk | `nextP` | |
-| enum member | prefix shared with the enum | `KjObject`, `KatInit` |
+| enum member | prefix shared with the enum | `CorObject`, `KatInit` |
 | macro | upper snake | `KT_W`, `K_VEC_SIZE` |
 
 An allocation parameter is named for what it allocates *into*, not for the fact
@@ -132,12 +132,12 @@ that it allocates.
 
 ---
 
-## 6. Trees (kjson)
+## 6. Trees (corTree)
 
-- **`kjChildAdd` re-points the added node's `->next`.** There is no `kjChildMove`.
+- **`corTreeChildAdd` re-points the added node's `->next`.** There is no `corTreeChildMove`.
   Adding a node that still belongs to another container does not move it — it
   splices the two lists together and silently drops whatever sat between.
-- So: **clone it, or unlink it first.** `kjChildRemove` then `kjChildAdd` is a
+- So: **clone it, or unlink it first.** `corTreeChildRemove` then `corTreeChildAdd` is a
   *move* and is correct when a move is what you want. When the source tree is the
   caller's and must survive, clone.
 - A function handed a tree **reads** it unless its contract says otherwise. If it

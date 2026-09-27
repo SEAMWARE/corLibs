@@ -63,6 +63,9 @@ while read -r repo ref; do
 done < <(sed 's/#.*//' "$PINS")
 
 REPOS+=(
+  "corTree:github:main"
+  "corJson:github:main"
+  "corProm:github:main"
   "corPlugin:github:main"
   "corBridge:github:main"
   "corDdsBridge:github:main"
