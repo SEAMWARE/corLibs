@@ -40,14 +40,6 @@ PROTO="${PROTO:-https}"
 JOBS="${JOBS:-$(nproc 2>/dev/null || echo 4)}"
 
 CI_ORG="SEAMWARE"        # the cor* repos
-KLIB_OWNER="kzangeli"    # the k-libs, on gitlab
-
-#
-# The k-lib pins come from ./klib-pins, which is the single source of truth -
-# the broker's Dockerfile reads the same file. Do not restate them here.
-#
-PINS="$HERE/klib-pins"
-[ -r "$PINS" ] || { echo "bootstrap.sh: cannot read $PINS"; exit 1; }
 
 #
 # repo : host : ref
@@ -56,13 +48,8 @@ PINS="$HERE/klib-pins"
 # only ever be stale. corLibs itself is deliberately absent - you are standing
 # in it.
 #
-REPOS=()
-while read -r repo ref; do
-  case "$repo" in ''|\#*) continue ;; esac
-  REPOS+=("$repo:gitlab:$ref")
-done < <(sed 's/#.*//' "$PINS")
-
-REPOS+=(
+REPOS=(
+  "corBase:github:main"
   "corLog:github:main"
   "corAlloc:github:main"
   "corArgs:github:main"
@@ -156,13 +143,8 @@ urlFor()
 {
   local repo="$1" host="$2"
 
-  if [ "$host" = gitlab ]; then
-    [ "$PROTO" = ssh ] && echo "git@gitlab.com:$KLIB_OWNER/${repo}.git" \
-                       || echo "https://gitlab.com/$KLIB_OWNER/${repo}.git"
-  else
-    [ "$PROTO" = ssh ] && echo "git@github.com:$CI_ORG/${repo}.git" \
-                       || echo "https://github.com/$CI_ORG/${repo}.git"
-  fi
+  [ "$PROTO" = ssh ] && echo "git@github.com:$CI_ORG/${repo}.git" \
+                     || echo "https://github.com/$CI_ORG/${repo}.git"
 }
 
 echo ">>> umbrella : $HERE"
@@ -184,7 +166,7 @@ for entry in "${REPOS[@]}"; do
   if [ -d "$BASE/$repo/.git" ]; then
     gitRetry "$repo fetch" git -C "$BASE/$repo" fetch --all --quiet
     git -C "$BASE/$repo" checkout --quiet "$ref"
-    # A pinned release branch has nothing to pull; main might. Never merge.
+    # Fast-forward only - never merge.
     git -C "$BASE/$repo" pull --ff-only --quiet || true
   else
     gitRetry "$repo clone" cloneFresh "$(urlFor "$repo" "$host")" "$ref" "$BASE/$repo"

@@ -20,9 +20,9 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 # silently skipped a library and silently looked for one that is not there. The
 # `-d` guard below is what made it quiet.
 #
-DIRS=$(sed -n 's/^K_DIRS *= *//p; s/^COR_DIRS *= *//p' "$ROOT/corLibs/makefile")
+DIRS=$(sed -n 's/^COR_DIRS *= *//p' "$ROOT/corLibs/makefile")
 if [ -z "$DIRS" ]; then
-  echo "iter.sh: could not read K_DIRS/COR_DIRS from corLibs/makefile" >&2
+  echo "iter.sh: could not read COR_DIRS from corLibs/makefile" >&2
   exit 1
 fi
 

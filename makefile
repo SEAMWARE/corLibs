@@ -6,7 +6,7 @@
 # Copyright 2026 Seamware
 # SPDX-License-Identifier: Apache-2.0
 #
-# Umbrella makefile for all k-libs and Cor-Libs.
+# Umbrella makefile for all Cor-Libs.
 # Every library is a separate repo, and they are SIBLINGS of this one - the
 # include paths and CMake references all resolve as ../<name>, so the layout is
 # part of the build contract.
@@ -18,16 +18,14 @@
 #
 ROOT ?= $(abspath $(dir $(lastword $(MAKEFILE_LIST)))..)
 
-# k-libs (foundation, no Cor-Lib dependencies)
-K_DIRS = kbase
-
 #
-# Cor-Libs (depend on k-libs and each other)
+# Cor-Libs, in dependency order
 #
-# corLog, corAlloc, corArgs, corHash, corTree, corJson and corProm come FIRST:
-# they are the foundation the rest are built on - the log, the allocator, the
-# command line, the hash tables, the tree, the JSON parser and renderer, and the
-# metrics - and they depend on k-libs only. corHttp comes next: corRest links it when built with
+# corBase is the very first: string/file/time helpers and the library log, and
+# it depends on nothing. corLog, corAlloc, corArgs, corHash, corTree, corJson and
+# corProm come next: they are the foundation the rest are built on - the log, the
+# allocator, the command line, the hash tables, the tree, the JSON parser and
+# renderer, and the metrics. corHttp comes next: corRest links it when built with
 # COR_HTTP_SERVER=builtin, and this loop is ordered.
 #
 #
@@ -38,9 +36,9 @@ K_DIRS = kbase
 # printed reason where it is not, and COR_BRIDGE_DDS=ON turns a missing
 # dependency into an error for anyone who meant it.
 #
-COR_DIRS = corLog corAlloc corArgs corHash corTree corJson corProm corHttp corBridge corRest corJsonld corPlugin corNgsild corDdsBridge
+COR_DIRS = corBase corLog corAlloc corArgs corHash corTree corJson corProm corHttp corBridge corRest corJsonld corPlugin corNgsild corDdsBridge
 
-DIRS = $(K_DIRS) $(COR_DIRS)
+DIRS = $(COR_DIRS)
 
 CORLIBS_HOME = $(ROOT)/corLibs
 BIN_DIR     = $(CORLIBS_HOME)/bin
@@ -163,5 +161,4 @@ help:
 	@echo "make help      - show this help"
 	@echo ""
 	@echo "Libraries under $(ROOT):"
-	@echo "  k-libs: $(K_DIRS)"
 	@echo "  Cor-Libs: $(COR_DIRS)"

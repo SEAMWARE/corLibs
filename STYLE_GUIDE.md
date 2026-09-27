@@ -1,7 +1,6 @@
 # Coding style — the Cor stack
 
-Governs the **k-libs** (`kbase`, `kalloc`, `kargs`), the
-**Cor-Libs** (`corLog`, `corHash`, `corTree`, `corJson`, `corProm`, `corRest`, `corJsonld`,
+Governs the **Cor-Libs** (`corBase`, `corAlloc`, `corArgs`, `corLog`, `corHash`, `corTree`, `corJson`, `corProm`, `corRest`, `corJsonld`,
 `corNgsild`, `corPlugin`, `corTest`) and **coraine**. One guide for all of them; where a rule below and
 existing code disagree, the rule wins and the code is wrong.
 
@@ -35,7 +34,7 @@ Groups separated by one blank line, no blank lines inside a group:
 
 1. C system headers
 2. third-party headers
-3. project headers, low-level to high-level (`kbase` → `kalloc` → `corLog` → `corTree` →
+3. project headers, low-level to high-level (`corBase` → `corAlloc` → `corLog` → `corTree` →
    `corJson` → `corHash` → `corRest` → `corJsonld` → `corNgsild`)
 4. **own interface last**, in a `.c`, commented `// Own interface`
 

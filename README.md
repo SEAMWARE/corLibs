@@ -1,14 +1,12 @@
 # corLibs
 
-Umbrella build for the **k-libs** and **Cor-Libs** that the coraine (NGSI-LD
+Umbrella build for the **Cor-Libs** that the coraine (NGSI-LD
 context broker) links against. **This repo contains no library.** What it holds is
 everything one needs to know to assemble the stack:
 
 - **which repositories make it up**, and in which order they build — `bootstrap.sh`
   and the makefile, which collect the archives, shared objects and test tooling
   into `lib/` and `bin/`
-- **at which versions** — `klib-pins`, the single source of truth for the k-lib
-  refs, read by `bootstrap.sh` and by the broker's own Dockerfile
 - **what environment that build needs** — `docker/Dockerfile.ci`, published as
   **`quay.io/seamware/coraine-ci`** and used by every cor repo's CI
 
@@ -27,28 +25,23 @@ them; it does not vendor them.
 ```
 ~/git/
 ├── corLibs/        ← this repo (umbrella: makefile + iter.sh, collects into bin/ lib/)
-├── kbase                                                      ← k-libs   (gitlab.com/kzangeli)
-├── corLog  corAlloc  corArgs  corHash  corTree  corJson  corProm  ← Cor-Libs  (github.com/SEAMWARE)
+├── corBase  corLog  corAlloc  corArgs  corHash  corTree  corJson  corProm  ← Cor-Libs  (github.com/SEAMWARE)
 ├── corHttp  corRest  corJsonld  corPlugin  corNgsild
 ├── corTest                                                    ← test runner (github.com/SEAMWARE)
 └── coraine                                                  ← the broker (links the above)
 ```
 
-Build order respects dependencies: k-libs first (foundation, no Cor-Lib deps),
-then Cor-Libs (`corLog corAlloc corArgs corHash corTree corJson corProm corHttp corRest corJsonld corPlugin corNgsild`) -
-the log, allocator, command-line, hash, tree, JSON and metrics libraries first, since they need nothing but k-libs; then
+Build order respects dependencies (`corBase corLog corAlloc corArgs corHash corTree corJson corProm corHttp corRest corJsonld corPlugin corNgsild`) -
+corBase first, since it needs nothing; then the log, allocator, command-line, hash, tree, JSON and metrics libraries; then
 corHttp, because corRest links it on a `COR_HTTP_SERVER=builtin` build.
 
 ## Libraries
 
 Each library has its own README (linked below — the repo landing page renders it).
 
-**k-libs** (gitlab.com/kzangeli) — foundation, no Cor-Lib dependencies:
+**Cor-Libs** (github.com/SEAMWARE):
 
-- [kbase](https://gitlab.com/kzangeli/kbase) — core utilities and base types
-
-**Cor-Libs** (github.com/SEAMWARE) — depend on the k-libs and each other:
-
+- [corBase](https://github.com/SEAMWARE/corBase) — core utilities and the library log (was the k-lib `kbase`)
 - [corLog](https://github.com/SEAMWARE/corLog) — logging and trace levels (was the k-lib `ktrace`)
 - [corAlloc](https://github.com/SEAMWARE/corAlloc) — arena allocator (`CorAlloc`) (was the k-lib `kalloc`)
 - [corArgs](https://github.com/SEAMWARE/corArgs) — CLI argument parsing (was the k-lib `kargs`)
@@ -72,24 +65,16 @@ Each library has its own README (linked below — the repo landing page renders 
 - A C toolchain + `make`. Individual libs may pull system packages (OpenSSL,
   libmicrohttpd, mosquitto, GEOS, the mongo-c v2 driver, …) — see coraine.
 
-The pinned versions known to build together live in [`klib-pins`](klib-pins),
-and **only** there - `bootstrap.sh`, this repo's umbrella makefile and the
-broker's `docker/Dockerfile` all read that one file.
-
-This README used to restate them as a table. It drifted, in five entries at
-once: it still named `klog`, which has left the stack entirely, and it claimed
-kjson `release/0.11.1` when the pin had reached `release/0.14.0`. That is the
-precise failure `klib-pins` exists to prevent, so there is no table here any
-more.
-
-The Cor-Libs - corHttp, corRest, corJsonld, corPlugin, corNgsild, corTest -
-track `main` by design.
+Every library tracks `main` by design: they move together, and a pin between
+them would only ever be stale. (The k-libs they grew out of were pinned to
+release branches in a `klib-pins` file; with corBase the last of them left the
+stack, and the file with them.)
 
 ## Quick start
 
 If you don't have the sibling repos yet, the easiest path is
-[`bootstrap.sh`](bootstrap.sh) **in this repo**: it clones every dependency at
-the refs `klib-pins` names, as siblings of corLibs, then runs the umbrella build.
+[`bootstrap.sh`](bootstrap.sh) **in this repo**: it clones every dependency
+as a sibling of corLibs, then runs the umbrella build.
 
 ```sh
 git clone https://github.com/SEAMWARE/corLibs.git && cd corLibs
