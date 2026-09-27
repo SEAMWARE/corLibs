@@ -141,8 +141,7 @@ RUN git clone --depth 1 --branch "${MONGOC_VERSION}" \
 #
 # ⭐ THE VERSIONS ARE NOT NAMED HERE. corDdsBridge/ddsenabler-pinned.repos is
 # the single source of truth for which eProsima releases the bridge is built
-# against - the relationship klib-pins has with the k-libs - so it is FETCHED
-# rather than restated. Two copies of a version pin are how they come to
+# against, so it is FETCHED rather than restated. Two copies of a version pin are how they come to
 # disagree at the worst possible moment.
 #
 # ⛔ And it pins RELEASES, not branches. eProsima's own ddsenabler.repos names
