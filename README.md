@@ -27,16 +27,16 @@ them; it does not vendor them.
 ```
 ~/git/
 ├── corLibs/        ← this repo (umbrella: makefile + iter.sh, collects into bin/ lib/)
-├── kbase  kalloc  khash  kargs  ktrace                        ← k-libs   (gitlab.com/kzangeli)
-├── corTree  corJson  corProm                                  ← Cor-Libs  (github.com/SEAMWARE)
+├── kbase  kalloc  kargs                                       ← k-libs   (gitlab.com/kzangeli)
+├── corLog  corHash  corTree  corJson  corProm                 ← Cor-Libs  (github.com/SEAMWARE)
 ├── corHttp  corRest  corJsonld  corPlugin  corNgsild
 ├── corTest                                                    ← test runner (github.com/SEAMWARE)
 └── coraine                                                  ← the broker (links the above)
 ```
 
 Build order respects dependencies: k-libs first (foundation, no Cor-Lib deps),
-then Cor-Libs (`corTree corJson corProm corHttp corRest corJsonld corPlugin corNgsild`) -
-the tree, JSON and metrics libraries first, since they need nothing but k-libs; then
+then Cor-Libs (`corLog corHash corTree corJson corProm corHttp corRest corJsonld corPlugin corNgsild`) -
+the log, hash, tree, JSON and metrics libraries first, since they need nothing but k-libs; then
 corHttp, because corRest links it on a `COR_HTTP_SERVER=builtin` build.
 
 ## Libraries
@@ -47,12 +47,12 @@ Each library has its own README (linked below — the repo landing page renders 
 
 - [kbase](https://gitlab.com/kzangeli/kbase) — core utilities and base types
 - [kalloc](https://gitlab.com/kzangeli/kalloc) — arena allocator (`KAlloc`)
-- [khash](https://gitlab.com/kzangeli/khash) — hash tables
 - [kargs](https://gitlab.com/kzangeli/kargs) — CLI argument parsing
-- [ktrace](https://gitlab.com/kzangeli/ktrace) — trace-level logging
 
 **Cor-Libs** (github.com/SEAMWARE) — depend on the k-libs and each other:
 
+- [corLog](https://github.com/SEAMWARE/corLog) — logging and trace levels (was the k-lib `ktrace`)
+- [corHash](https://github.com/SEAMWARE/corHash) — hash tables (was the k-lib `khash`)
 - [corTree](https://github.com/SEAMWARE/corTree) — the tree (`CorNode`): build, edit, look up, clone, sort
 - [corJson](https://github.com/SEAMWARE/corJson) — JSON parser and renderers over a corTree, and the `corJson` tool
 - [corProm](https://github.com/SEAMWARE/corProm) — Prometheus metrics

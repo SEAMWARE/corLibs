@@ -12,6 +12,4 @@
 #
 kbase   release/0.11.1
 kalloc  release/0.10.2
-khash   release/0.10
 kargs   release/0.10.1
-ktrace  release/0.10
