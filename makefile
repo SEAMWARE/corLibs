@@ -19,13 +19,15 @@
 ROOT ?= $(abspath $(dir $(lastword $(MAKEFILE_LIST)))..)
 
 # k-libs (foundation, no Cor-Lib dependencies)
-K_DIRS = kbase ktrace kalloc kjson khash kprom kargs
+K_DIRS = kbase ktrace kalloc khash kargs
 
 #
 # Cor-Libs (depend on k-libs and each other)
 #
-# corHttp comes FIRST: corRest links it when built with COR_HTTP_SERVER=builtin,
-# and this loop is ordered.
+# corTree, corJson and corProm come FIRST: they are the foundation the rest are
+# built on - the tree, the JSON parser and renderer, and the metrics - and they
+# depend on k-libs only. corHttp comes next: corRest links it when built with
+# COR_HTTP_SERVER=builtin, and this loop is ordered.
 #
 #
 # corDdsBridge is LAST and gates itself. It is a bridge plugin, not a library
@@ -35,7 +37,7 @@ K_DIRS = kbase ktrace kalloc kjson khash kprom kargs
 # printed reason where it is not, and COR_BRIDGE_DDS=ON turns a missing
 # dependency into an error for anyone who meant it.
 #
-COR_DIRS = corHttp corBridge corRest corJsonld corPlugin corNgsild corDdsBridge
+COR_DIRS = corTree corJson corProm corHttp corBridge corRest corJsonld corPlugin corNgsild corDdsBridge
 
 DIRS = $(K_DIRS) $(COR_DIRS)
 
@@ -54,14 +56,19 @@ install-local:
 	@cat $(ROOT)/corTest/corDiff > $(BIN_DIR)/corDiff && chmod +x $(BIN_DIR)/corDiff
 	@cat $(ROOT)/corTest/corDiffGui > $(BIN_DIR)/corDiffGui && chmod +x $(BIN_DIR)/corDiffGui
 #
-# kjson belongs beside corTest, not merely near it. corCurl pipes every JSON
-# response through `kjson -sort` before comparison - member order is insertion
+# corJson belongs beside corTest, not merely near it. corCurl pipes every JSON
+# response through `corJson -sort` before comparison - member order is insertion
 # order and none of a test's business - and every expect in every suite was
-# captured that way. A corTest without a kjson is a corTest that fails 611 of 612
-# tests on member order, which is precisely what CI did before this line existed.
-# Having one now implies having the other: one directory on PATH, both tools.
+# captured that way. A corTest without a corJson is a corTest that fails 611 of
+# 612 tests on member order, which is precisely what CI did before this line
+# existed. Having one now implies having the other: one directory on PATH, both
+# tools.
 #
-	@if [ -x $(ROOT)/kjson/bin/kjson ]; then 	   cat $(ROOT)/kjson/bin/kjson > $(BIN_DIR)/kjson && chmod +x $(BIN_DIR)/kjson; 	 else 	   echo "WARNING: $(ROOT)/kjson/bin/kjson not built - corTest will refuse to run"; 	 fi
+	@if [ -x $(ROOT)/corJson/bin/corJson ]; then \
+	   cat $(ROOT)/corJson/bin/corJson > $(BIN_DIR)/corJson && chmod +x $(BIN_DIR)/corJson; \
+	 else \
+	   echo "WARNING: $(ROOT)/corJson/bin/corJson not built - corTest will refuse to run"; \
+	 fi
 #
 # The `|| true` is load-bearing. A directory with no lib*.so or lib*.a leaves
 # the glob unexpanded, the [ -f ] fails, and because that test is the LAST
