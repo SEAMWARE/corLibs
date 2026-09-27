@@ -123,7 +123,7 @@ that it allocates.
 
 - Request-scoped memory comes from a **kalloc arena**, not `malloc`. It is freed by
   resetting the arena, so nothing in the request path frees individually.
-- `kaBufferReset(kaP, KFALSE)` is **teardown, not reuse** — it frees the blocks and
+- `corAllocBufferReset(kaP, false)` is **teardown, not reuse** — it frees the blocks and
   leaves the list pointing at them. A reset inside a loop must pass `KTRUE`, or the
   second pass double-frees.
 - Free explicitly and only when non-NULL; do not lean on `free(NULL)` being legal to
