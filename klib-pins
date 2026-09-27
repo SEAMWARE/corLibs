@@ -11,5 +11,3 @@
 # Format: <repo> <ref>, one per line. Blank lines and #-comments ignored.
 #
 kbase   release/0.11.1
-kalloc  release/0.10.2
-kargs   release/0.10.1

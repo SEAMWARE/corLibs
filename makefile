@@ -19,14 +19,15 @@
 ROOT ?= $(abspath $(dir $(lastword $(MAKEFILE_LIST)))..)
 
 # k-libs (foundation, no Cor-Lib dependencies)
-K_DIRS = kbase kalloc kargs
+K_DIRS = kbase
 
 #
 # Cor-Libs (depend on k-libs and each other)
 #
-# corLog, corHash, corTree, corJson and corProm come FIRST: they are the
-# foundation the rest are built on - the log, the hash tables, the tree, the JSON
-# parser and renderer, and the metrics - and they depend on k-libs only. corHttp comes next: corRest links it when built with
+# corLog, corAlloc, corArgs, corHash, corTree, corJson and corProm come FIRST:
+# they are the foundation the rest are built on - the log, the allocator, the
+# command line, the hash tables, the tree, the JSON parser and renderer, and the
+# metrics - and they depend on k-libs only. corHttp comes next: corRest links it when built with
 # COR_HTTP_SERVER=builtin, and this loop is ordered.
 #
 #
@@ -37,7 +38,7 @@ K_DIRS = kbase kalloc kargs
 # printed reason where it is not, and COR_BRIDGE_DDS=ON turns a missing
 # dependency into an error for anyone who meant it.
 #
-COR_DIRS = corLog corHash corTree corJson corProm corHttp corBridge corRest corJsonld corPlugin corNgsild corDdsBridge
+COR_DIRS = corLog corAlloc corArgs corHash corTree corJson corProm corHttp corBridge corRest corJsonld corPlugin corNgsild corDdsBridge
 
 DIRS = $(K_DIRS) $(COR_DIRS)
 
