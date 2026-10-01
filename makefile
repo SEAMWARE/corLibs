@@ -36,7 +36,10 @@ ROOT ?= $(abspath $(dir $(lastword $(MAKEFILE_LIST)))..)
 # printed reason where it is not, and COR_BRIDGE_DDS=ON turns a missing
 # dependency into an error for anyone who meant it.
 #
-COR_DIRS = corBase corLog corAlloc corArgs corHash corTree corJson corProm corHttp corBridge corRest corJsonld corPlugin corNgsild corDdsBridge
+# corModbusBridge is a bridge plugin too, and sits beside it at the end - but
+# needs nothing beyond libc, so it is always built.
+#
+COR_DIRS = corBase corLog corAlloc corArgs corHash corTree corJson corProm corHttp corBridge corRest corJsonld corPlugin corNgsild corDdsBridge corModbusBridge
 
 DIRS = $(COR_DIRS)
 
