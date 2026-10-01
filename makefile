@@ -37,9 +37,10 @@ ROOT ?= $(abspath $(dir $(lastword $(MAKEFILE_LIST)))..)
 # dependency into an error for anyone who meant it.
 #
 # corModbusBridge is a bridge plugin too, and sits beside it at the end - but
-# needs nothing beyond libc, so it is always built.
+# needs nothing beyond libc, so it is always built. corMqttBridge likewise, with
+# libmosquitto, which the broker itself linked until MQTT became mqtt.so.
 #
-COR_DIRS = corBase corLog corAlloc corArgs corHash corTree corJson corProm corHttp corBridge corRest corJsonld corPlugin corNgsild corDdsBridge corModbusBridge
+COR_DIRS = corBase corLog corAlloc corArgs corHash corTree corJson corProm corHttp corBridge corRest corJsonld corPlugin corNgsild corDdsBridge corModbusBridge corMqttBridge
 
 DIRS = $(COR_DIRS)
 
