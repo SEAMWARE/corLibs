@@ -66,6 +66,7 @@ REPOS=(
   "corRest:github:main"
   "corJsonld:github:main"
   "corNgsild:github:main"
+  "corTools:github:main"
   "corTest:github:main"
 )
 

@@ -36,11 +36,15 @@ ROOT ?= $(abspath $(dir $(lastword $(MAKEFILE_LIST)))..)
 # printed reason where it is not, and COR_BRIDGE_DDS=ON turns a missing
 # dependency into an error for anyone who meant it.
 #
+# corTools comes right after corNgsild, the last library: its tools (corRequest,
+# corTestClient) link the whole stack, and install-local puts them into bin/,
+# beside corTest, which uses both.
+#
 # corModbusBridge is a bridge plugin too, and sits beside it at the end - but
 # needs nothing beyond libc, so it is always built. corMqttBridge likewise, with
 # libmosquitto, which the broker itself linked until MQTT became mqtt.so.
 #
-COR_DIRS = corBase corLog corAlloc corArgs corHash corTree corJson corProm corHttp corBridge corRest corJsonld corPlugin corNgsild corDdsBridge corModbusBridge corMqttBridge
+COR_DIRS = corBase corLog corAlloc corArgs corHash corTree corJson corProm corHttp corBridge corRest corJsonld corPlugin corNgsild corTools corDdsBridge corModbusBridge corMqttBridge
 
 DIRS = $(COR_DIRS)
 
@@ -79,6 +83,17 @@ install-local:
 # directory fails the whole install. corDdsBridge is exactly that: it builds
 # dds.so, a plugin, which nothing links and which does not belong in lib/.
 #
+#
+# corTools: the tools the functests run - corRequest (cor://) and corTestClient
+# (the receiver, mock source and bridge peer). Like corJson: beside corTest.
+#
+	@for t in corRequest corTestClient; do \
+	  if [ -x $(ROOT)/corTools/bin/$$t ]; then \
+	    cat $(ROOT)/corTools/bin/$$t > $(BIN_DIR)/$$t && chmod +x $(BIN_DIR)/$$t; \
+	  else \
+	    echo "WARNING: $(ROOT)/corTools/bin/$$t not built - the functests need it"; \
+	  fi; \
+	done
 	@for dir in $(DIRS); do \
 	  for f in $(ROOT)/$$dir/lib*.so $(ROOT)/$$dir/lib*.a; do \
 	    [ -f "$$f" ] && cat "$$f" > $(LIB_DIR)/$$(basename "$$f"); \
