@@ -27,13 +27,14 @@ them; it does not vendor them.
 ├── corLibs/        ← this repo (umbrella: makefile + iter.sh, collects into bin/ lib/)
 ├── corBase  corLog  corAlloc  corArgs  corHash  corTree  corJson  corProm  ← Cor-Libs  (github.com/SEAMWARE)
 ├── corHttp  corRest  corJsonld  corPlugin  corNgsild
+├── corTools                                                   ← corRequest, corTestClient (github.com/SEAMWARE)
 ├── corTest                                                    ← test runner (github.com/SEAMWARE)
 └── coraine                                                  ← the broker (links the above)
 ```
 
-Build order respects dependencies (`corBase corLog corAlloc corArgs corHash corTree corJson corProm corHttp corRest corJsonld corPlugin corNgsild`) -
+Build order respects dependencies (`corBase corLog corAlloc corArgs corHash corTree corJson corProm corHttp corRest corJsonld corPlugin corNgsild corTools`) -
 corBase first, since it needs nothing; then the log, allocator, command-line, hash, tree, JSON and metrics libraries; then
-corHttp, because corRest links it on a `COR_HTTP_SERVER=builtin` build.
+corHttp, because corRest links it on a `COR_HTTP_SERVER=builtin` build; corTools last, since its tools link the whole stack.
 
 ## Libraries
 
@@ -58,6 +59,7 @@ Each library has its own README (linked below — the repo landing page renders 
 **Tooling** (github.com/SEAMWARE):
 
 - [corTest](https://github.com/SEAMWARE/corTest) — generic functional-test harness (input → stdout, with `REGEX()` / `#SORT` smart diff); `install` collects its runner into `bin/`
+- [corTools](https://github.com/SEAMWARE/corTools) — `corRequest` (a cor:// client: one request like `curl -i`, or load like `wrk`) and `corTestClient` (notification receiver, mock context source, bridge-plugin host); `install` collects both into `bin/`
 
 ## Prerequisites
 
@@ -122,8 +124,8 @@ cd ~/git/coraine && make di
 
 - `install` collects into this repo's `bin/` and `lib/` (both git-ignored). It
   also copies `corTest`, `corDiff`, `corDiffGui` and `corTestFunctions.sh` from
-  `../corTest`, which coraine's test target (`~/git/corLibs/bin/corTest`) relies
-  on.
+  `../corTest`, and `corRequest` and `corTestClient` from `../corTools`, which
+  coraine's test target (`~/git/corLibs/bin/corTest`) relies on.
 - The umbrella does not pin versions itself — it builds whatever each sibling
   repo is currently checked out at. Use `make branch` to confirm, or the
   bootstrap script to get the pinned set.
