@@ -86,6 +86,7 @@ install-local:
 #
 # corTools: the tools the functests run - corRequest (cor://) and corTestClient
 # (the receiver, mock source and bridge peer). Like corJson: beside corTest.
+# corMongoDrop too, where it was built (only with libmongoc - no warning without).
 #
 	@for t in corRequest corTestClient; do \
 	  if [ -x $(ROOT)/corTools/bin/$$t ]; then \
@@ -94,6 +95,9 @@ install-local:
 	    echo "WARNING: $(ROOT)/corTools/bin/$$t not built - the functests need it"; \
 	  fi; \
 	done
+	@if [ -x $(ROOT)/corTools/bin/corMongoDrop ]; then \
+	   cat $(ROOT)/corTools/bin/corMongoDrop > $(BIN_DIR)/corMongoDrop && chmod +x $(BIN_DIR)/corMongoDrop; \
+	 fi
 	@for dir in $(DIRS); do \
 	  for f in $(ROOT)/$$dir/lib*.so $(ROOT)/$$dir/lib*.a; do \
 	    [ -f "$$f" ] && cat "$$f" > $(LIB_DIR)/$$(basename "$$f"); \
