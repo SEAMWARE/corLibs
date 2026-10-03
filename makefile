@@ -36,7 +36,11 @@ ROOT ?= $(abspath $(dir $(lastword $(MAKEFILE_LIST)))..)
 # printed reason where it is not, and COR_BRIDGE_DDS=ON turns a missing
 # dependency into an error for anyone who meant it.
 #
-# corTools comes right after corNgsild, the last library: its tools (corRequest,
+# corDB comes right after corNgsild: the broker's in-process database, a plugin repo (corDB.so,
+# troe/corDB.so) built against coraine's plugin interface - so it gates itself like corDdsBridge:
+# skipped, with the reason, where no coraine checkout sits beside it (coraine's make di builds it).
+#
+# corTools comes after them: its tools (corRequest,
 # corTestClient) link the whole stack, and install-local puts them into bin/,
 # beside corTest, which uses both.
 #
@@ -44,7 +48,7 @@ ROOT ?= $(abspath $(dir $(lastword $(MAKEFILE_LIST)))..)
 # needs nothing beyond libc, so it is always built. corMqttBridge likewise, with
 # libmosquitto, which the broker itself linked until MQTT became mqtt.so.
 #
-COR_DIRS = corBase corLog corAlloc corArgs corHash corTree corJson corProm corHttp corBridge corRest corJsonld corPlugin corNgsild corTools corDdsBridge corModbusBridge corMqttBridge
+COR_DIRS = corBase corLog corAlloc corArgs corHash corTree corJson corProm corHttp corBridge corRest corJsonld corPlugin corNgsild corDB corTools corDdsBridge corModbusBridge corMqttBridge
 
 DIRS = $(COR_DIRS)
 
