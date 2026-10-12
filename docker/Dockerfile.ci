@@ -37,7 +37,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Pinned the same way the broker image pins them, and for the same reason.
 ARG MONGOC_VERSION=2.2.2
-ARG MHD_VERSION=1.0.2
+ARG MHD_VERSION=1.0.10
 
 # ---------------------------------------------------------------------------
 #
@@ -103,13 +103,12 @@ RUN curl -fsSL https://pgp.mongodb.com/server-8.0.asc \
 # those daemons impossible to create. The mock exits, its port never opens, and
 # the failure reads as "port not ready" - which says nothing about a missing
 # feature in a dependency. gnutls is the backend MHD uses for it.
-RUN curl -fsSL "https://ftp.gnu.org/gnu/libmicrohttpd/libmicrohttpd-${MHD_VERSION}.tar.gz" -o /tmp/mhd.tar.gz \
- && tar -xzf /tmp/mhd.tar.gz -C /tmp \
- && cd "/tmp/libmicrohttpd-${MHD_VERSION}" \
- && ./configure --disable-doc --disable-examples \
- && make -j"$(nproc)" && make install \
- && ldconfig \
- && rm -rf "/tmp/libmicrohttpd-${MHD_VERSION}" /tmp/mhd.tar.gz
+#
+# Built by tools/mhd/mhdBuild.sh, as everywhere in the stack: the tarball checked against its pinned
+# SHA-256, the stack's patches applied.
+COPY tools/mhd/ /tmp/mhd/
+RUN MHD_VERSION="${MHD_VERSION}" /tmp/mhd/mhdBuild.sh \
+ && rm -rf /tmp/mhd
 
 # mongo-c driver v2 - required by the mongoc DB plugin (pkg-config: mongoc2).
 RUN git clone --depth 1 --branch "${MONGOC_VERSION}" \
