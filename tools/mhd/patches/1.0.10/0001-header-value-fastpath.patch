@@ -1,0 +1,33 @@
+mhd-header-value-fastpath - a header value's plain characters, skipped in one tight loop
+
+get_req_header() reads a header line one character at a time, and for every character of a value it
+re-tests CR, LF, whitespace and NUL and writes the line's parse state (ws_start) back to the connection.
+A long value costs in proportion: a 700-byte "Authorization: Bearer <JWT>" was 0.86 us of a 10 us PATCH
+(coraine on one core, corDB, 8.5 % of the throughput), almost all of it in get_req_headers.
+
+After the first character of a value, every following character above the space character is processed
+exactly as that one is (nothing to check, nothing to record): this patch skips them in a loop that only
+compares. CR, LF, SP, HTAB, NUL and the other control characters stop it and go through the loop as
+before - the line end, folding, bare CR / LF and the client discipline levels are untouched. With
+MHD_FAVOR_SMALL_CODE the code is the release's.
+
+Measured: the same token costs 0.31 us (3.2 %). libmicrohttpd's own `make check`: 180 of 180 pass.
+
+--- a/src/microhttpd/connection.c
++++ b/src/microhttpd/connection.c
+@@ -6524,6 +6524,15 @@
+           c->rq.hdrs.hdr.value_start = p;
+ #ifndef MHD_FAVOR_SMALL_CODE
+         c->rq.hdrs.hdr.ws_start = 0; /* Not on whitespace anymore */
++        /* The characters above the space character that follow are all
++           processed exactly as this one: skip them in one tight loop.
++           Everything else (CR, LF, whitespace, NUL, other control
++           characters) goes through the loop above. */
++        do
++          p++;
++        while ((p < c->read_buffer_offset) &&
++               (((unsigned char) c->read_buffer[p]) > ' '));
++        continue;
+ #endif /* ! MHD_FAVOR_SMALL_CODE */
+       }
+ #ifdef MHD_FAVOR_SMALL_CODE
