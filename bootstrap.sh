@@ -62,6 +62,7 @@ REPOS=(
   "corDdsBridge:github:main"
   "corModbusBridge:github:main"
   "corMqttBridge:github:main"
+  "corCkanBridge:github:main"
   "corHttp:github:main"
   "corRest:github:main"
   "corJsonld:github:main"
