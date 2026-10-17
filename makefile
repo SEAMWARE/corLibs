@@ -66,6 +66,7 @@ install-local:
 	@cat $(ROOT)/corTest/corTestFunctions.sh > $(BIN_DIR)/corTestFunctions.sh
 	@cat $(ROOT)/corTest/corDiff > $(BIN_DIR)/corDiff && chmod +x $(BIN_DIR)/corDiff
 	@cat $(ROOT)/corTest/corDiffGui > $(BIN_DIR)/corDiffGui && chmod +x $(BIN_DIR)/corDiffGui
+	@cat $(ROOT)/corTest/corRegenExpect > $(BIN_DIR)/corRegenExpect && chmod +x $(BIN_DIR)/corRegenExpect   # corTest --regen's fallback, beside it
 #
 # corJson belongs beside corTest, not merely near it. corCurl pipes every JSON
 # response through `corJson -sort` before comparison - member order is insertion

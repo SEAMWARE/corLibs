@@ -123,7 +123,7 @@ cd ~/git/coraine && make di
 ## Notes
 
 - `install` collects into this repo's `bin/` and `lib/` (both git-ignored). It
-  also copies `corTest`, `corDiff`, `corDiffGui` and `corTestFunctions.sh` from
+  also copies `corTest`, `corDiff`, `corDiffGui`, `corRegenExpect` and `corTestFunctions.sh` from
   `../corTest`, and `corRequest` and `corTestClient` from `../corTools`, which
   coraine's test target (`~/git/corLibs/bin/corTest`) relies on.
 - The umbrella does not pin versions itself — it builds whatever each sibling
