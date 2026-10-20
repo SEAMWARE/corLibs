@@ -1,4 +1,4 @@
-# Dockerfile.mongo-rs - mongo:8.0, started as a single-node REPLICA SET.
+# Dockerfile.mongo-rs - mongo:8.2, started as a single-node REPLICA SET.
 #
 # WHAT THIS IS: the stock upstream image with one thing changed - the command.
 # No packages, no configuration, no data. If it ever needs a second line of
@@ -16,7 +16,7 @@
 #
 # WHY IT CANNOT BE DONE IN THE WORKFLOW: a GitHub Actions `services:` block
 # passes docker-create OPTIONS but not a COMMAND, so `--replSet` cannot be
-# appended to mongo:8.0 from a workflow, and the job container has mongosh but
+# appended to mongo:8.2 from a workflow, and the job container has mongosh but
 # no mongod of its own to start instead. Two lines here, and every consumer
 # keeps using an ordinary service container.
 #
@@ -30,7 +30,10 @@
 # ONE MEMBER is the whole point. This is not a test of replication; it is the
 # smallest thing that has an oplog.
 #
-FROM mongo:8.0
+# mongo 8.2, not 8.0: 8.0 refuses to start on a Linux kernel 6.19 or newer
+# (SERVER-121912), and GitHub's runners have one since image 20261018.
+#
+FROM mongo:8.2
 
 #
 # The upstream entrypoint prepends `mongod` only when the command starts with a

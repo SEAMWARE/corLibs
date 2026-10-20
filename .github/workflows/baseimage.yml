@@ -112,7 +112,7 @@ jobs:
 
       #
       # The mongo service image, and it is a service image rather than a base:
-      # nothing builds inside it. It is mongo:8.0 with --replSet on the command
+      # nothing builds inside it. It is mongo:8.2 with --replSet on the command
       # line, because a workflow `services:` block cannot pass a command and the
       # HA cache sync needs an oplog to watch. It rides along here because this
       # is where a Dockerfile in this repo gets published, not because it has
