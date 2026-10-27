@@ -1,7 +1,7 @@
 # Coding style — the Cor stack
 
-Governs the **Cor-Libs** (`corBase`, `corAlloc`, `corArgs`, `corLog`, `corHash`, `corTree`, `corJson`, `corProm`, `corRest`, `corJsonld`,
-`corNgsild`, `corPlugin`, `corTest`) and **coraine**. One guide for all of them; where a rule below and
+Governs the **Cor-Libs** (`corBase`, `corAlloc`, `corArgs`, `corLog`, `corHash`, `corTree`, `corJson`, `corProm`, `corHttp`, `corBridge`,
+`corRest`, `corJsonld`, `corNgsild`, `corPlugin`, `corDB`, `corTools`, `corTest`, the bridge plugins) and **coraine**. One guide for all of them; where a rule below and
 existing code disagree, the rule wins and the code is wrong.
 
 Every rule here is here because something went wrong without it. Where that is

@@ -26,15 +26,21 @@ them; it does not vendor them.
 ~/git/
 ├── corLibs/        ← this repo (umbrella: makefile + iter.sh, collects into bin/ lib/)
 ├── corBase  corLog  corAlloc  corArgs  corHash  corTree  corJson  corProm  ← Cor-Libs  (github.com/SEAMWARE)
-├── corHttp  corRest  corJsonld  corPlugin  corNgsild
-├── corTools                                                   ← corRequest, corTestClient (github.com/SEAMWARE)
+├── corHttp  corBridge  corRest  corJsonld  corPlugin  corNgsild
+├── corDB                                                      ← the in-process database (plugins)
+├── corTools                                                   ← corRequest, corTestClient, corMongoDrop (github.com/SEAMWARE)
+├── corDdsBridge  corModbusBridge  corMqttBridge               ← bridge plugins built by the umbrella
+├── corCkanBridge  corOpcuaBridge                              ← bridge plugins cloned, not built by the umbrella
 ├── corTest                                                    ← test runner (github.com/SEAMWARE)
 └── coraine                                                  ← the broker (links the above)
 ```
 
-Build order respects dependencies (`corBase corLog corAlloc corArgs corHash corTree corJson corProm corHttp corRest corJsonld corPlugin corNgsild corTools`) -
+Build order respects dependencies (`COR_DIRS` in the makefile: `corBase corLog corAlloc corArgs corHash corTree corJson corProm corHttp corBridge corRest corJsonld corPlugin corNgsild corDB corTools corDdsBridge corModbusBridge corMqttBridge`) -
 corBase first, since it needs nothing; then the log, allocator, command-line, hash, tree, JSON and metrics libraries; then
-corHttp, because corRest links it on a `COR_HTTP_SERVER=builtin` build; corTools last, since its tools link the whole stack.
+corHttp, because corRest links it on a `COR_HTTP_SERVER=builtin` build; corDB after corNgsild (it is skipped, with the reason,
+where no coraine checkout sits beside it); corTools after the libraries, since its tools link the whole stack; the bridge
+plugins last - corDdsBridge is skipped, with the reason, where the DDS Enabler is not installed. corCkanBridge and
+corOpcuaBridge are cloned by `bootstrap.sh` but not built here: coraine's `coraine-build` builds them when asked (`--bridges ckan`, `--bridges opcua`).
 
 ## Libraries
 
@@ -42,24 +48,34 @@ Each library has its own README (linked below — the repo landing page renders 
 
 **Cor-Libs** (github.com/SEAMWARE):
 
-- [corBase](https://github.com/SEAMWARE/corBase) — core utilities and the library log (was the k-lib `kbase`)
-- [corLog](https://github.com/SEAMWARE/corLog) — logging and trace levels (was the k-lib `ktrace`)
-- [corAlloc](https://github.com/SEAMWARE/corAlloc) — arena allocator (`CorAlloc`) (was the k-lib `kalloc`)
-- [corArgs](https://github.com/SEAMWARE/corArgs) — CLI argument parsing (was the k-lib `kargs`)
-- [corHash](https://github.com/SEAMWARE/corHash) — hash tables (was the k-lib `khash`)
+- [corBase](https://github.com/SEAMWARE/corBase) — core utilities, coroutines and the library log
+- [corLog](https://github.com/SEAMWARE/corLog) — logging and trace levels
+- [corAlloc](https://github.com/SEAMWARE/corAlloc) — arena allocator (`CorAlloc`)
+- [corArgs](https://github.com/SEAMWARE/corArgs) — CLI argument parsing
+- [corHash](https://github.com/SEAMWARE/corHash) — hash tables
 - [corTree](https://github.com/SEAMWARE/corTree) — the tree (`CorNode`): build, edit, look up, clone, sort
 - [corJson](https://github.com/SEAMWARE/corJson) — JSON parser and renderers over a corTree, and the `corJson` tool
 - [corProm](https://github.com/SEAMWARE/corProm) — Prometheus metrics
 - [corHttp](https://github.com/SEAMWARE/corHttp) — HTTP server (the builtin backend: `SO_REUSEPORT` event loops)
+- [corBridge](https://github.com/SEAMWARE/corBridge) — the contract a bridge plugin satisfies
 - [corRest](https://github.com/SEAMWARE/corRest) — REST server (libmicrohttpd or corHttp) + HTTP client
 - [corJsonld](https://github.com/SEAMWARE/corJsonld) — JSON-LD context expansion / compaction
 - [corPlugin](https://github.com/SEAMWARE/corPlugin) — generic plugin loader (`dlopen` wrapper)
 - [corNgsild](https://github.com/SEAMWARE/corNgsild) — NGSI-LD validation + format conversion
 
+**Plugins** (github.com/SEAMWARE):
+
+- [corDB](https://github.com/SEAMWARE/corDB) — the in-process database: current state and TRoE (`corDB.so`, `troe/corDB.so`)
+- [corDdsBridge](https://github.com/SEAMWARE/corDdsBridge) — DDS (and ROS 2) bridge, `dds.so`
+- [corModbusBridge](https://github.com/SEAMWARE/corModbusBridge) — Modbus bridge, `modbus.so`
+- [corMqttBridge](https://github.com/SEAMWARE/corMqttBridge) — MQTT bridge, `mqtt.so`
+- [corCkanBridge](https://github.com/SEAMWARE/corCkanBridge) — CKAN open-data bridge (not built by the umbrella)
+- [corOpcuaBridge](https://github.com/SEAMWARE/corOpcuaBridge) — OPC UA bridge, open62541 (not built by the umbrella)
+
 **Tooling** (github.com/SEAMWARE):
 
 - [corTest](https://github.com/SEAMWARE/corTest) — generic functional-test harness (input → stdout, with `REGEX()` / `#SORT` smart diff); `install` collects its runner into `bin/`
-- [corTools](https://github.com/SEAMWARE/corTools) — `corRequest` (a cor:// client: one request like `curl -i`, or load like `wrk`) and `corTestClient` (notification receiver, mock context source, bridge-plugin host); `install` collects both into `bin/`
+- [corTools](https://github.com/SEAMWARE/corTools) — `corRequest` (a cor:// client: one request like `curl -i`, or load like `wrk`), `corTestClient` (notification receiver, mock context source, bridge-plugin host) and `corMongoDrop` (drops MongoDB databases fast, where libmongoc is); `install` collects them into `bin/`
 
 ## Prerequisites
 
@@ -68,9 +84,7 @@ Each library has its own README (linked below — the repo landing page renders 
   libmicrohttpd, mosquitto, GEOS, the mongo-c v2 driver, …) — see coraine.
 
 Every library tracks `main` by design: they move together, and a pin between
-them would only ever be stale. (The k-libs they grew out of were pinned to
-release branches in a `klib-pins` file; with corBase the last of them left the
-stack, and the file with them.)
+them would only ever be stale. `bootstrap.sh` clones each one at `main`.
 
 ## Quick start
 
@@ -82,10 +96,6 @@ as a sibling of corLibs, then runs the umbrella build.
 git clone https://github.com/SEAMWARE/corLibs.git && cd corLibs
 ./bootstrap.sh                  # PROTO=ssh for SSH URLs, NOBUILD=1 to clone only
 ```
-
-(It used to be a loose `bootstrap-corlibs.sh` in the parent directory, outside
-version control — which is why CI could not run it and it drifted. It lives next
-to the makefile it drives now.)
 
 Otherwise, with the siblings already cloned:
 
@@ -124,8 +134,8 @@ cd ~/git/coraine && make di
 
 - `install` collects into this repo's `bin/` and `lib/` (both git-ignored). It
   also copies `corTest`, `corDiff`, `corDiffGui`, `corRegenExpect` and `corTestFunctions.sh` from
-  `../corTest`, and `corRequest` and `corTestClient` from `../corTools`, which
+  `../corTest`, `corJson` from `../corJson`, and `corRequest`, `corTestClient` and `corMongoDrop` (where
+  built) from `../corTools`, which
   coraine's test target (`~/git/corLibs/bin/corTest`) relies on.
-- The umbrella does not pin versions itself — it builds whatever each sibling
-  repo is currently checked out at. Use `make branch` to confirm, or the
-  bootstrap script to get the pinned set.
+- The umbrella does not pin versions — it builds whatever each sibling repo is
+  currently checked out at. `make branch` shows which branch that is.
