@@ -23,6 +23,8 @@
 #   NOBUILD=1 ./bootstrap.sh       # clone only, skip the build
 #   BASE=/somewhere ./bootstrap.sh # place the siblings elsewhere
 #   JOBS=8 ./bootstrap.sh          # parallel build jobs
+#   RESOLVE=1 ./bootstrap.sh       # print '<repo> <sha>' for this umbrella and every ref below, nothing else
+#   COR_LIBS_PIN="$(cat pin.txt)" ./bootstrap.sh   # every repository at the commit a RESOLVE printed
 #
 # After it completes, build the broker:
 #   cd <BASE>/coraine && make di
@@ -153,6 +155,51 @@ urlFor()
                      || echo "https://github.com/$CI_ORG/${repo}.git"
 }
 
+
+#
+# RESOLVE=1 - the commit every repository's ref names right now, and nothing else: '<repo> <sha>' per
+# line, this umbrella first (its own checkout - the list below is the one it holds). What the
+# pre-release campaign records, so that the release is built from the commits it tested.
+#
+if [ "${RESOLVE:-0}" = 1 ]; then
+  echo "corLibs $(git -C "$HERE" rev-parse HEAD)"
+  for entry in "${REPOS[@]}"; do
+    IFS=':' read -r repo host ref <<< "$entry"
+    sha=$(gitRetry "$repo ls-remote" git ls-remote "$(urlFor "$repo" "$host")" "refs/heads/$ref" | cut -f1)
+    [ -n "$sha" ] || { echo "$repo has no $ref" >&2; exit 1; }
+    echo "$repo $sha"
+  done
+  exit 0
+fi
+
+
+#
+# COR_LIBS_PIN - the lines a RESOLVE printed: every repository at its recorded commit instead of at its
+# ref, the umbrella too. A repository the pin does not name is an error, not its ref's newest commit.
+#
+pinOf()
+{
+  awk -v r="$1" '$1 == r { print $2 }' <<< "${COR_LIBS_PIN:-}"
+}
+
+#
+# The umbrella pins itself: it is checked out at the recorded commit and this script started again from
+# there - the makefile and the list of repositories are the ones of that commit. One { } group, read
+# whole before it runs: the checkout changes this very file under the shell reading it.
+#
+if [ -n "${COR_LIBS_PIN:-}" ]; then
+  {
+    own=$(pinOf corLibs)
+    [ -n "$own" ] || { echo "COR_LIBS_PIN names no corLibs" >&2; exit 1; }
+    if [ "$(git -C "$HERE" rev-parse HEAD)" != "$own" ]; then
+      echo ">>> corLibs: to the pinned $own"
+      git -C "$HERE" cat-file -e "$own^{commit}" 2>/dev/null || gitRetry "corLibs fetch" git -C "$HERE" fetch --quiet origin "$own"
+      git -C "$HERE" checkout --quiet --detach "$own"
+      exec "$HERE/bootstrap.sh" "$@"
+    fi
+  }
+fi
+
 echo ">>> umbrella : $HERE"
 echo ">>> base dir : $BASE"
 echo ">>> protocol : $PROTO"
@@ -176,6 +223,13 @@ for entry in "${REPOS[@]}"; do
     git -C "$BASE/$repo" pull --ff-only --quiet || true
   else
     gitRetry "$repo clone" cloneFresh "$(urlFor "$repo" "$host")" "$ref" "$BASE/$repo"
+  fi
+
+  if [ -n "${COR_LIBS_PIN:-}" ]; then
+    sha=$(pinOf "$repo")
+    [ -n "$sha" ] || { echo "COR_LIBS_PIN names no $repo" >&2; exit 1; }
+    git -C "$BASE/$repo" checkout --quiet --detach "$sha"
+    echo ">>> $repo pinned at $sha"
   fi
 done
 

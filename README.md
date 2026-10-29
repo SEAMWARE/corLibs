@@ -86,6 +86,11 @@ Each library has its own README (linked below — the repo landing page renders 
 Every library tracks `main` by design: they move together, and a pin between
 them would only ever be stale. `bootstrap.sh` clones each one at `main`.
 
+One exception: a release. coraine's pre-release campaign records the commit of every repository it
+tested (`RESOLVE=1 ./bootstrap.sh` prints them, `<repo> <sha>` per line, corLibs first), and the
+release is built from that record (`COR_LIBS_PIN="<those lines>" ./bootstrap.sh`: every repository,
+corLibs too, at its recorded commit; one the record does not name is an error).
+
 ## Quick start
 
 If you don't have the sibling repos yet, the easiest path is
