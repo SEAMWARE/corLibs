@@ -36,7 +36,7 @@ LABEL org.opencontainers.image.title="coraine-ci" \
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Pinned the same way the broker image pins them, and for the same reason.
-ARG MONGOC_VERSION=2.2.2
+ARG MONGOC_VERSION=2.5.7
 ARG MHD_VERSION=1.0.10
 
 # ---------------------------------------------------------------------------
