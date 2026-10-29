@@ -111,15 +111,12 @@ RUN MHD_VERSION="${MHD_VERSION}" /tmp/mhd/mhdBuild.sh \
  && rm -rf /tmp/mhd
 
 # mongo-c driver v2 - required by the mongoc DB plugin (pkg-config: mongoc2).
-RUN git clone --depth 1 --branch "${MONGOC_VERSION}" \
-      https://github.com/mongodb/mongo-c-driver.git /tmp/mongo-c \
- && cmake -S /tmp/mongo-c -B /tmp/mongo-c/build \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DENABLE_TESTS=OFF -DENABLE_EXAMPLES=OFF -DBUILD_TESTING=OFF \
- && cmake --build /tmp/mongo-c/build -j"$(nproc)" \
- && cmake --install /tmp/mongo-c/build \
- && ldconfig \
- && rm -rf /tmp/mongo-c
+#
+# Built by tools/mongoc/mongocBuild.sh, as everywhere in the stack: the release tarball checked against its
+# pinned SHA-256, the stack's patches applied.
+COPY tools/mongoc/ /tmp/mongoc/
+RUN MONGOC_VERSION="${MONGOC_VERSION}" /tmp/mongoc/mongocBuild.sh --docdir /usr/local/share/doc/mongo-c-driver \
+ && rm -rf /tmp/mongoc
 
 # ---------------------------------------------------------------------------
 #

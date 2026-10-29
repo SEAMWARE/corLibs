@@ -1,0 +1,86 @@
+mongoc-modified-notice - each file the patches before this one change says so, a line at its top
+
+Apache License 2.0, 4(b): a modified file carries a prominent notice that it was changed. Not a change of the
+driver's behaviour - and not one to send upstream with the others.
+
+diff --git a/src/libmongoc/src/mongoc/mongoc-client-private.h b/src/libmongoc/src/mongoc/mongoc-client-private.h
+index 9015d03..21431c7 100644
+--- a/src/libmongoc/src/mongoc/mongoc-client-private.h
++++ b/src/libmongoc/src/mongoc/mongoc-client-private.h
+@@ -1,3 +1,4 @@
++/* Modified by Seamware (2026): see corLibs/tools/mongoc/patches/ (github.com/SEAMWARE/corLibs) - this file is not as MongoDB released it. */
+ /*
+  * Copyright 2009-present MongoDB, Inc.
+  *
+diff --git a/src/libmongoc/src/mongoc/mongoc-client-session-private.h b/src/libmongoc/src/mongoc/mongoc-client-session-private.h
+index 58f2e74..8d6c011 100644
+--- a/src/libmongoc/src/mongoc/mongoc-client-session-private.h
++++ b/src/libmongoc/src/mongoc/mongoc-client-session-private.h
+@@ -1,3 +1,4 @@
++/* Modified by Seamware (2026): see corLibs/tools/mongoc/patches/ (github.com/SEAMWARE/corLibs) - this file is not as MongoDB released it. */
+ /*
+  * Copyright 2009-present MongoDB, Inc.
+  *
+diff --git a/src/libmongoc/src/mongoc/mongoc-client-session.c b/src/libmongoc/src/mongoc/mongoc-client-session.c
+index 3c2ddae..7e1042a 100644
+--- a/src/libmongoc/src/mongoc/mongoc-client-session.c
++++ b/src/libmongoc/src/mongoc/mongoc-client-session.c
+@@ -1,3 +1,4 @@
++/* Modified by Seamware (2026): see corLibs/tools/mongoc/patches/ (github.com/SEAMWARE/corLibs) - this file is not as MongoDB released it. */
+ /*
+  * Copyright 2009-present MongoDB, Inc.
+  *
+diff --git a/src/libmongoc/src/mongoc/mongoc-client.c b/src/libmongoc/src/mongoc/mongoc-client.c
+index b290cd2..dcc612e 100644
+--- a/src/libmongoc/src/mongoc/mongoc-client.c
++++ b/src/libmongoc/src/mongoc/mongoc-client.c
+@@ -1,3 +1,4 @@
++/* Modified by Seamware (2026): see corLibs/tools/mongoc/patches/ (github.com/SEAMWARE/corLibs) - this file is not as MongoDB released it. */
+ /*
+  * Copyright 2009-present MongoDB, Inc.
+  *
+diff --git a/src/libmongoc/src/mongoc/mongoc-cluster.c b/src/libmongoc/src/mongoc/mongoc-cluster.c
+index 2f1bd08..964403b 100644
+--- a/src/libmongoc/src/mongoc/mongoc-cluster.c
++++ b/src/libmongoc/src/mongoc/mongoc-cluster.c
+@@ -1,3 +1,4 @@
++/* Modified by Seamware (2026): see corLibs/tools/mongoc/patches/ (github.com/SEAMWARE/corLibs) - this file is not as MongoDB released it. */
+ /*
+  * Copyright 2009-present MongoDB, Inc.
+  *
+diff --git a/src/libmongoc/src/mongoc/mongoc-cmd.c b/src/libmongoc/src/mongoc/mongoc-cmd.c
+index 60f092d..aa36979 100644
+--- a/src/libmongoc/src/mongoc/mongoc-cmd.c
++++ b/src/libmongoc/src/mongoc/mongoc-cmd.c
+@@ -1,3 +1,4 @@
++/* Modified by Seamware (2026): see corLibs/tools/mongoc/patches/ (github.com/SEAMWARE/corLibs) - this file is not as MongoDB released it. */
+ /*
+  * Copyright 2009-present MongoDB, Inc.
+  *
+diff --git a/src/libmongoc/src/mongoc/mongoc-cursor.c b/src/libmongoc/src/mongoc/mongoc-cursor.c
+index ba508dc..14fcc86 100644
+--- a/src/libmongoc/src/mongoc/mongoc-cursor.c
++++ b/src/libmongoc/src/mongoc/mongoc-cursor.c
+@@ -1,3 +1,4 @@
++/* Modified by Seamware (2026): see corLibs/tools/mongoc/patches/ (github.com/SEAMWARE/corLibs) - this file is not as MongoDB released it. */
+ /*
+  * Copyright 2009-present MongoDB, Inc.
+  *
+diff --git a/src/libmongoc/src/mongoc/mongoc-retryable-cmd.c b/src/libmongoc/src/mongoc/mongoc-retryable-cmd.c
+index c98a218..e73c0b7 100644
+--- a/src/libmongoc/src/mongoc/mongoc-retryable-cmd.c
++++ b/src/libmongoc/src/mongoc/mongoc-retryable-cmd.c
+@@ -1,3 +1,4 @@
++/* Modified by Seamware (2026): see corLibs/tools/mongoc/patches/ (github.com/SEAMWARE/corLibs) - this file is not as MongoDB released it. */
+ /*
+  * Copyright 2009-present MongoDB, Inc.
+  *
+diff --git a/src/libmongoc/src/mongoc/mongoc-rpc.c b/src/libmongoc/src/mongoc/mongoc-rpc.c
+index 6e03105..4100e27 100644
+--- a/src/libmongoc/src/mongoc/mongoc-rpc.c
++++ b/src/libmongoc/src/mongoc/mongoc-rpc.c
+@@ -1,3 +1,4 @@
++/* Modified by Seamware (2026): see corLibs/tools/mongoc/patches/ (github.com/SEAMWARE/corLibs) - this file is not as MongoDB released it. */
+ /*
+  * Copyright 2009-present MongoDB, Inc.
+  *

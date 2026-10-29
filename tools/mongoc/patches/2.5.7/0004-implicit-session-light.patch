@@ -1,0 +1,160 @@
+mongoc-implicit-session-light - an implicit session without the transaction state it cannot use
+
+A command or a cursor with no session of the caller's gets one of the driver's own, an implicit session, made by
+mongoc_client_start_session() as an explicit one is: a copy of the client's default transaction options and a
+jitter source (the backoff of withTransaction) - neither of which an implicit session ever reads, since it can
+start no transaction. _mongoc_client_start_implicit_session() makes the session without them; cmd.c and
+cursor.c, the two places that start implicit sessions, call it. mongoc_client_start_session() is unchanged.
+_mongoc_client_session_new() takes whether the session is implicit; mongoc_client_session_start_transaction(),
+the one reader of the default transaction options, is never called on an implicit session.
+
+Measured (coraine, mongo 8.2.12, user-space instructions per request, perf stat): PATCH -1,829, retrieve -774 (after 0001-0003).
+
+diff --git a/src/libmongoc/src/mongoc/mongoc-client-private.h b/src/libmongoc/src/mongoc/mongoc-client-private.h
+index 53a1265..9015d03 100644
+--- a/src/libmongoc/src/mongoc/mongoc-client-private.h
++++ b/src/libmongoc/src/mongoc/mongoc-client-private.h
+@@ -251,4 +251,7 @@ _mongoc_client_set_jitter_source(mongoc_client_t *client, mongoc_jitter_source_t
+ 
+ BSON_END_DECLS
+ 
++mongoc_client_session_t *
++_mongoc_client_start_implicit_session(mongoc_client_t *client, const mongoc_session_opt_t *opts);
++
+ #endif /* MONGOC_CLIENT_PRIVATE_H */
+diff --git a/src/libmongoc/src/mongoc/mongoc-client-session-private.h b/src/libmongoc/src/mongoc/mongoc-client-session-private.h
+index b0b9208..58f2e74 100644
+--- a/src/libmongoc/src/mongoc/mongoc-client-session-private.h
++++ b/src/libmongoc/src/mongoc/mongoc-client-session-private.h
+@@ -119,7 +119,8 @@ mongoc_client_session_t *
+ _mongoc_client_session_new(mongoc_client_t *client,
+                            mongoc_server_session_t *server_session,
+                            const mongoc_session_opt_t *opts,
+-                           uint32_t client_session_id);
++                           uint32_t client_session_id,
++                           bool implicit);
+ 
+ bool
+ _mongoc_client_session_from_iter(mongoc_client_t *client,
+diff --git a/src/libmongoc/src/mongoc/mongoc-client-session.c b/src/libmongoc/src/mongoc/mongoc-client-session.c
+index 8088a0a..3c2ddae 100644
+--- a/src/libmongoc/src/mongoc/mongoc-client-session.c
++++ b/src/libmongoc/src/mongoc/mongoc-client-session.c
+@@ -757,7 +757,8 @@ mongoc_client_session_t *
+ _mongoc_client_session_new(mongoc_client_t *client,
+                            mongoc_server_session_t *server_session,
+                            const mongoc_session_opt_t *opts,
+-                           uint32_t client_session_id)
++                           uint32_t client_session_id,
++                           bool implicit)
+ {
+    mongoc_client_session_t *session;
+ 
+@@ -775,11 +776,16 @@ _mongoc_client_session_new(mongoc_client_t *client,
+ 
+    mongoc_optional_init(&session->opts.causal_consistency);
+    mongoc_optional_init(&session->opts.snapshot);
+-   txn_opts_set(&session->opts.default_txn_opts,
+-                client->read_concern,
+-                client->write_concern,
+-                client->read_prefs,
+-                DEFAULT_MAX_COMMIT_TIME_MS);
++
++   // An implicit session (the driver's own, for one command or one cursor) never starts a transaction: the
++   // transaction defaults and the jitter source (mongoc_client_session_with_transaction) are for explicit ones.
++   if (!implicit) {
++      txn_opts_set(&session->opts.default_txn_opts,
++                   client->read_concern,
++                   client->write_concern,
++                   client->read_prefs,
++                   DEFAULT_MAX_COMMIT_TIME_MS);
++   }
+ 
+    if (opts) {
+       mongoc_optional_copy(&opts->causal_consistency, &session->opts.causal_consistency);
+@@ -802,7 +808,9 @@ _mongoc_client_session_new(mongoc_client_t *client,
+    session->with_txn_timeout_ms = 0;
+    session->fail_commit_label = NULL;
+ 
+-   session->jitter_source = _mongoc_jitter_source_new(_mongoc_jitter_source_generate_default);
++   if (!implicit) {
++      session->jitter_source = _mongoc_jitter_source_new(_mongoc_jitter_source_generate_default);
++   }
+ 
+    RETURN(session);
+ }
+diff --git a/src/libmongoc/src/mongoc/mongoc-client.c b/src/libmongoc/src/mongoc/mongoc-client.c
+index 975981d..b290cd2 100644
+--- a/src/libmongoc/src/mongoc/mongoc-client.c
++++ b/src/libmongoc/src/mongoc/mongoc-client.c
+@@ -1280,8 +1280,11 @@ mongoc_client_get_uri(const mongoc_client_t *client)
+  *--------------------------------------------------------------------------
+  */
+ 
+-mongoc_client_session_t *
+-mongoc_client_start_session(mongoc_client_t *client, const mongoc_session_opt_t *opts, bson_error_t *error)
++static mongoc_client_session_t *
++_mongoc_client_start_session(mongoc_client_t *client,
++                             const mongoc_session_opt_t *opts,
++                             bool implicit,
++                             bson_error_t *error)
+ {
+    BSON_ASSERT_PARAM(client);
+ 
+@@ -1326,7 +1329,7 @@ mongoc_client_start_session(mongoc_client_t *client, const mongoc_session_opt_t
+       }
+    }
+ 
+-   cs = _mongoc_client_session_new(client, ss, opts, csid);
++   cs = _mongoc_client_session_new(client, ss, opts, csid, implicit);
+ 
+    /* remember session so if we see its client_session_id in a command, we can
+     * find its lsid and clusterTime */
+@@ -1336,6 +1339,21 @@ mongoc_client_start_session(mongoc_client_t *client, const mongoc_session_opt_t
+ }
+ 
+ 
++mongoc_client_session_t *
++mongoc_client_start_session(mongoc_client_t *client, const mongoc_session_opt_t *opts, bson_error_t *error)
++{
++   return _mongoc_client_start_session(client, opts, false, error);
++}
++
++
++// The driver's own session for one command or one cursor - errors ignored, as its callers do
++mongoc_client_session_t *
++_mongoc_client_start_implicit_session(mongoc_client_t *client, const mongoc_session_opt_t *opts)
++{
++   return _mongoc_client_start_session(client, opts, true, NULL);
++}
++
++
+ /*
+  *--------------------------------------------------------------------------
+  *
+diff --git a/src/libmongoc/src/mongoc/mongoc-cmd.c b/src/libmongoc/src/mongoc/mongoc-cmd.c
+index 1114fb4..60f092d 100644
+--- a/src/libmongoc/src/mongoc/mongoc-cmd.c
++++ b/src/libmongoc/src/mongoc/mongoc-cmd.c
+@@ -805,7 +805,7 @@ mongoc_cmd_parts_assemble(mongoc_cmd_parts_t *parts, mongoc_server_stream_t *ser
+       /* If an explicit session was not provided and lsid is not prohibited,
+        * attempt to create an implicit session (ignoring any errors). */
+       if (!cs && !parts->prohibit_lsid && parts->assembled.is_acknowledged) {
+-         cs = mongoc_client_start_session(parts->client, NULL, NULL);
++         cs = _mongoc_client_start_implicit_session(parts->client, NULL);
+ 
+          if (cs) {
+             parts->assembled.session = cs;
+diff --git a/src/libmongoc/src/mongoc/mongoc-cursor.c b/src/libmongoc/src/mongoc/mongoc-cursor.c
+index 8e48910..ba508dc 100644
+--- a/src/libmongoc/src/mongoc/mongoc-cursor.c
++++ b/src/libmongoc/src/mongoc/mongoc-cursor.c
+@@ -845,7 +845,7 @@ _mongoc_cursor_run_command(mongoc_cursor_t *cursor, const bson_t *command, const
+       session_opts = mongoc_session_opts_new();
+       mongoc_session_opts_set_causal_consistency(session_opts, false);
+       /* returns NULL if sessions aren't supported. ignore errors. */
+-      cursor->client_session = mongoc_client_start_session(cursor->client, session_opts, NULL);
++      cursor->client_session = _mongoc_client_start_implicit_session(cursor->client, session_opts);
+       mongoc_cmd_parts_set_session(&parts, cursor->client_session);
+       mongoc_session_opts_destroy(session_opts);
+    }
