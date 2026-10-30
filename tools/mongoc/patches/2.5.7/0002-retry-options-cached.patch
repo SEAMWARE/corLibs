@@ -1,0 +1,137 @@
+mongoc-retry-options-cached - retryReads and retryWrites read from the URI once, when the client is made
+
+Every command asked the client's URI for retryReads and retryWrites (mongoc_uri_get_option_as_bool: a
+case-insensitive search of the URI's options), at about ten places in cluster, cmd, cursor and client - several
+times per command. A client's URI does not change after it is made, so mongoc_client_t reads both once, beside
+enable_overload_retargeting (already read so), and the ten places read the client's copies. The values are the
+same: the same option, the same defaults (MONGOC_DEFAULT_RETRYREADS / _RETRYWRITES).
+
+Measured (coraine, mongo 8.2.12, user-space instructions per request, perf stat): PATCH -5,714, retrieve -2,052 (after 0001).
+
+diff --git a/src/libmongoc/src/mongoc/mongoc-client-private.h b/src/libmongoc/src/mongoc/mongoc-client-private.h
+index edcd256..53a1265 100644
+--- a/src/libmongoc/src/mongoc/mongoc-client-private.h
++++ b/src/libmongoc/src/mongoc/mongoc-client-private.h
+@@ -131,6 +131,9 @@ struct _mongoc_client_t {
+    mongoc_jitter_source_t *jitter_source;
+    int32_t max_adaptive_retries;
+    bool enable_overload_retargeting;
++   // retryReads / retryWrites of the URI, read once: the client's URI does not change, and every command asks.
++   bool retry_reads;
++   bool retry_writes;
+ };
+ 
+ /* Defines whether _mongoc_client_command_with_opts() is acting as a read
+diff --git a/src/libmongoc/src/mongoc/mongoc-client.c b/src/libmongoc/src/mongoc/mongoc-client.c
+index 34ff637..975981d 100644
+--- a/src/libmongoc/src/mongoc/mongoc-client.c
++++ b/src/libmongoc/src/mongoc/mongoc-client.c
+@@ -1138,6 +1138,9 @@ _mongoc_client_new_from_topology(mongoc_topology_t *topology)
+    client->max_adaptive_retries = _mongoc_uri_get_max_adaptive_retries(client->uri);
+    client->enable_overload_retargeting = mongoc_uri_get_option_as_bool(
+       client->uri, MONGOC_URI_ENABLEOVERLOADRETARGETING, MONGOC_DEFAULT_ENABLEOVERLOADRETARGETING);
++   client->retry_reads = mongoc_uri_get_option_as_bool(client->uri, MONGOC_URI_RETRYREADS, MONGOC_DEFAULT_RETRYREADS);
++   client->retry_writes =
++      mongoc_uri_get_option_as_bool(client->uri, MONGOC_URI_RETRYWRITES, MONGOC_DEFAULT_RETRYWRITES);
+ 
+    write_concern = mongoc_uri_get_write_concern(client->uri);
+    client->write_concern = mongoc_write_concern_copy(write_concern);
+@@ -1730,15 +1733,15 @@ _mongoc_client_retryable_read_command_with_stream(mongoc_client_t *client,
+ 
+       // runCommand is not eligible for overload retries if retryReads=false or retryWrites=false.
+       if (parts->is_raw_command) {
+-         if (!mongoc_uri_get_option_as_bool(parts->client->uri, MONGOC_URI_RETRYREADS, MONGOC_DEFAULT_RETRYREADS) ||
+-             !mongoc_uri_get_option_as_bool(parts->client->uri, MONGOC_URI_RETRYWRITES, MONGOC_DEFAULT_RETRYWRITES)) {
++         if (!parts->client->retry_reads ||
++             !parts->client->retry_writes) {
+             retry_eligibility = MONGOC_RETRY_ELIGIBILITY_NONE;
+          }
+       }
+ 
+       // Reads are not eligible for overload retries if retryReads=false.
+       if (parts->is_read_command &&
+-          !mongoc_uri_get_option_as_bool(parts->client->uri, MONGOC_URI_RETRYREADS, MONGOC_DEFAULT_RETRYREADS)) {
++          !parts->client->retry_reads) {
+          retry_eligibility = MONGOC_RETRY_ELIGIBILITY_NONE;
+       }
+    }
+diff --git a/src/libmongoc/src/mongoc/mongoc-cluster.c b/src/libmongoc/src/mongoc/mongoc-cluster.c
+index cd1c2e3..2f1bd08 100644
+--- a/src/libmongoc/src/mongoc/mongoc-cluster.c
++++ b/src/libmongoc/src/mongoc/mongoc-cluster.c
+@@ -2840,7 +2840,7 @@ mongoc_cluster_stream_for_reads(mongoc_cluster_t *cluster,
+    // behavior will be applied to all read operations executed within the
+    // MongoClient.
+    const bool is_retryable =
+-      mongoc_uri_get_option_as_bool(cluster->uri, MONGOC_URI_RETRYREADS, MONGOC_DEFAULT_RETRYREADS);
++      cluster->client->retry_reads;
+ 
+    return _mongoc_cluster_stream_for_optype(
+       cluster, MONGOC_SS_READ, log_context, prefs_override, cs, is_retryable, ds, reply, error);
+@@ -2857,7 +2857,7 @@ mongoc_cluster_stream_for_writes(mongoc_cluster_t *cluster,
+    BSON_OPTIONAL_PARAM(reply);
+ 
+    const bool is_retryable =
+-      mongoc_uri_get_option_as_bool(cluster->uri, MONGOC_URI_RETRYWRITES, MONGOC_DEFAULT_RETRYWRITES);
++      cluster->client->retry_writes;
+ 
+    return _mongoc_cluster_stream_for_optype(
+       cluster, MONGOC_SS_WRITE, log_context, NULL, cs, is_retryable, ds, reply, error);
+@@ -2877,7 +2877,7 @@ mongoc_cluster_stream_for_aggr_with_write(mongoc_cluster_t *cluster,
+       _mongoc_client_session_in_txn(cs) ? cs->txn.opts.read_prefs : read_prefs;
+ 
+    const bool is_retryable =
+-      mongoc_uri_get_option_as_bool(cluster->uri, MONGOC_URI_RETRYWRITES, MONGOC_DEFAULT_RETRYWRITES);
++      cluster->client->retry_writes;
+ 
+    return _mongoc_cluster_stream_for_optype(
+       cluster, MONGOC_SS_AGGREGATE_WITH_WRITE, log_context, prefs_override, cs, is_retryable, NULL, reply, error);
+@@ -3678,7 +3678,7 @@ mongoc_cluster_run_retryable_write(mongoc_cluster_t *cluster,
+    if (is_retryable_write) {
+       // Meets requirements of Retryable Write.
+       retry_eligibility = MONGOC_RETRY_ELIGIBILITY_RETRYABLE_WRITE;
+-   } else if (mongoc_uri_get_option_as_bool(cluster->uri, MONGOC_URI_RETRYWRITES, MONGOC_DEFAULT_RETRYWRITES)) {
++   } else if (cluster->client->retry_writes) {
+       // Eligible for overload retries only.
+       retry_eligibility = MONGOC_RETRY_ELIGIBILITY_OVERLOAD_ONLY;
+    } else {
+diff --git a/src/libmongoc/src/mongoc/mongoc-cmd.c b/src/libmongoc/src/mongoc/mongoc-cmd.c
+index 479f05f..1114fb4 100644
+--- a/src/libmongoc/src/mongoc/mongoc-cmd.c
++++ b/src/libmongoc/src/mongoc/mongoc-cmd.c
+@@ -641,7 +641,7 @@ _is_retryable_write(const mongoc_cmd_parts_t *parts, const mongoc_server_stream_
+       return false;
+    }
+ 
+-   if (!mongoc_uri_get_option_as_bool(parts->client->uri, MONGOC_URI_RETRYWRITES, MONGOC_DEFAULT_RETRYWRITES)) {
++   if (!parts->client->retry_writes) {
+       return false;
+    }
+ 
+@@ -671,7 +671,7 @@ _is_retryable_read(const mongoc_cmd_parts_t *parts, const mongoc_server_stream_t
+       return false;
+    }
+ 
+-   if (!mongoc_uri_get_option_as_bool(parts->client->uri, MONGOC_URI_RETRYREADS, MONGOC_DEFAULT_RETRYREADS)) {
++   if (!parts->client->retry_reads) {
+       return false;
+    }
+ 
+diff --git a/src/libmongoc/src/mongoc/mongoc-cursor.c b/src/libmongoc/src/mongoc/mongoc-cursor.c
+index f10449b..8e48910 100644
+--- a/src/libmongoc/src/mongoc/mongoc-cursor.c
++++ b/src/libmongoc/src/mongoc/mongoc-cursor.c
+@@ -925,11 +925,11 @@ _mongoc_cursor_run_command(mongoc_cursor_t *cursor, const bson_t *command, const
+       // Meets requirements of Retryable Read.
+       retry_eligibility = MONGOC_RETRY_ELIGIBILITY_RETRYABLE_READ;
+    } else if (is_read &&
+-              mongoc_uri_get_option_as_bool(parts.client->uri, MONGOC_URI_RETRYREADS, MONGOC_DEFAULT_RETRYREADS)) {
++              parts.client->retry_reads) {
+       // Eligible for overload retries only.
+       retry_eligibility = MONGOC_RETRY_ELIGIBILITY_OVERLOAD_ONLY;
+    } else if (!is_read &&
+-              mongoc_uri_get_option_as_bool(parts.client->uri, MONGOC_URI_RETRYWRITES, MONGOC_DEFAULT_RETRYWRITES)) {
++              parts.client->retry_writes) {
+       // Eligible for overload retries only.
+       retry_eligibility = MONGOC_RETRY_ELIGIBILITY_OVERLOAD_ONLY;
+    } else {
