@@ -28,6 +28,7 @@ on:
       - docker/Dockerfile.ci-nightly
       - docker/Dockerfile.mongo-rs
       - tools/mhd/**
+      - tools/mongoc/**
       - .github/workflows/baseimage.yml
   push:
     branches:
@@ -37,6 +38,7 @@ on:
       - docker/Dockerfile.ci-nightly
       - docker/Dockerfile.mongo-rs
       - tools/mhd/**
+      - tools/mongoc/**
       - .github/workflows/baseimage.yml
   workflow_dispatch:
 
